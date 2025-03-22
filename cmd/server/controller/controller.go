@@ -3,8 +3,8 @@ package controller
 import (
 	"net/http"
 
-	"github.com/arrowls/go-metrics/cmd/server/middleware"
 	"github.com/arrowls/go-metrics/cmd/server/service"
+	"github.com/arrowls/go-metrics/internal/middleware"
 )
 
 type Metric interface {
