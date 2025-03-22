@@ -27,7 +27,7 @@ func (c *MetricController) HandleNew(rw http.ResponseWriter, r *http.Request) {
 	// /update/{type}/{name}/{value}
 	urlParts := strings.Split(r.URL.Path, "/")
 
-	if len(urlParts) < 4 {
+	if len(urlParts) < 5 {
 		rw.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -37,6 +37,11 @@ func (c *MetricController) HandleNew(rw http.ResponseWriter, r *http.Request) {
 		name       = urlParts[3]
 		value      = urlParts[4]
 	)
+
+	if value == "" {
+		rw.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	if name == "" {
 		rw.WriteHeader(http.StatusNotFound)
@@ -48,6 +53,4 @@ func (c *MetricController) HandleNew(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
 	}
-
-	rw.WriteHeader(http.StatusOK)
 }
