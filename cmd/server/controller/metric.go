@@ -28,7 +28,7 @@ func (c *MetricController) HandleNew(rw http.ResponseWriter, r *http.Request) {
 	urlParts := strings.Split(r.URL.Path, "/")
 
 	if len(urlParts) < 5 {
-		rw.WriteHeader(http.StatusBadRequest)
+		rw.WriteHeader(http.StatusNotFound)
 		return
 	}
 
