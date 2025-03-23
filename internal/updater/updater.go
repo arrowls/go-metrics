@@ -42,18 +42,19 @@ func (u *Updater) postGauge(metricType string, metricValue float64) {
 	url := fmt.Sprintf("%s/update/gauge/%s/%f", u.serverURL, metricType, metricValue)
 
 	resp, err := http.Post(url, "text/plain", nil)
-	defer resp.Body.Close()
 
 	if err != nil {
 		fmt.Printf("Error posting metric to server: %v\n", err)
 	}
+
+	resp.Body.Close()
 }
 func (u *Updater) postCounter(metricType string, metricValue int64) {
 	url := fmt.Sprintf("%s/update/counter/%s/%d", u.serverURL, metricType, metricValue)
 	resp, err := http.Post(url, "text/plain", nil)
-	defer resp.Body.Close()
 
 	if err != nil {
 		fmt.Printf("Error posting metric to server: %v\n", err)
 	}
+	resp.Body.Close()
 }
