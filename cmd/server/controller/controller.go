@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/arrowls/go-metrics/cmd/server/service"
-	"github.com/arrowls/go-metrics/internal/middleware"
+	"github.com/go-chi/chi/v5"
 )
 
 type Metric interface {
@@ -21,15 +21,10 @@ func NewController(services *service.Service) *Controller {
 	}
 }
 
-func (c *Controller) InitRoutes() *http.ServeMux {
-	mux := http.NewServeMux()
+func (c *Controller) InitRoutes() *chi.Mux {
+	router := chi.NewRouter()
 
-	mux.Handle("/update/", middleware.Wrap(
-		http.HandlerFunc(c.Metric.HandleNew),
-		[]middleware.Middleware{
-			middleware.Logger, // example
-		},
-	))
+	router.Post("/update/{type}/{name}/{value}", c.Metric.HandleNew)
 
-	return mux
+	return router
 }

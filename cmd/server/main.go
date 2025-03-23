@@ -7,14 +7,16 @@ import (
 	"github.com/arrowls/go-metrics/cmd/server/controller"
 	"github.com/arrowls/go-metrics/cmd/server/repository"
 	"github.com/arrowls/go-metrics/cmd/server/service"
+	"github.com/arrowls/go-metrics/internal/memstorage"
 )
 
 func main() {
-	repo := repository.NewRepository()
+	storage := memstorage.GetInstance()
+	repo := repository.NewRepository(storage)
 	services := service.NewService(repo)
 	controllers := controller.NewController(services)
 
-	mux := controllers.InitRoutes()
+	router := controllers.InitRoutes()
 
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	log.Fatal(http.ListenAndServe(":8080", router))
 }
