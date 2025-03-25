@@ -32,7 +32,7 @@ func NewController(services *service.Service) *Controller {
 func (c *Controller) InitRoutes() *chi.Mux {
 	router := chi.NewRouter()
 
-	router.Get("/*", c.Public.HandlePublic)
+	router.Get("/assets/*", c.Public.HandlePublic)
 	router.Get("/", c.Public.HandleIndex)
 	router.Post("/update/{type}/{name}/{value}", c.Metric.HandleNew)
 	router.Get("/value/{type}/{name}", c.Metric.HandleItem)
