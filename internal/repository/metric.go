@@ -38,3 +38,27 @@ func (m *MetricRepository) AddCounterValue(name string, value int64) {
 	printValue, _ := json.MarshalIndent(m.storage.Counter, " ", " ")
 	fmt.Printf("Current counter values: %s\n", printValue)
 }
+
+func (m *MetricRepository) GetAll() memstorage.MemStorage {
+	return *m.storage
+}
+
+func (m *MetricRepository) GetGaugeItem(name string) (float64, error) {
+	item, ok := m.storage.Gauge[name]
+
+	if !ok {
+		return 0, fmt.Errorf("gauge item not found")
+	}
+
+	return item, nil
+}
+
+func (m *MetricRepository) GetCounterItem(name string) (int64, error) {
+	item, ok := m.storage.Counter[name]
+
+	if !ok {
+		return 0, fmt.Errorf("counter item not found")
+	}
+
+	return item, nil
+}

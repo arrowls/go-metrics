@@ -3,7 +3,7 @@ package controller
 import (
 	"net/http"
 
-	"github.com/arrowls/go-metrics/cmd/server/service"
+	"github.com/arrowls/go-metrics/internal/service"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -38,5 +38,29 @@ func (c *MetricController) HandleNew(rw http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
+	}
+}
+
+func (c *MetricController) HandleItem(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Add("Content-Type", "text/plain")
+	metricType := chi.URLParam(r, "type")
+	name := chi.URLParam(r, "name")
+
+	if name == "" {
+		http.Error(rw, "No metric name specified", http.StatusNotFound)
+		return
+	}
+
+	value, err := c.service.Metric.GetItem(metricType, name)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	_, err = rw.Write([]byte(value))
+
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }

@@ -1,11 +1,13 @@
 package service
 
 import (
-	"github.com/arrowls/go-metrics/cmd/server/repository"
+	"github.com/arrowls/go-metrics/internal/repository"
 )
 
 type Metric interface {
 	CreateByType(metricType string, name string, stringValue string) error
+	GetList() *map[string]interface{}
+	GetItem(metricType string, name string) (string, error)
 }
 
 type Service struct {

@@ -4,10 +4,10 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/arrowls/go-metrics/cmd/server/controller"
-	"github.com/arrowls/go-metrics/cmd/server/repository"
-	"github.com/arrowls/go-metrics/cmd/server/service"
+	"github.com/arrowls/go-metrics/internal/controller"
 	"github.com/arrowls/go-metrics/internal/memstorage"
+	"github.com/arrowls/go-metrics/internal/repository"
+	"github.com/arrowls/go-metrics/internal/service"
 )
 
 func main() {

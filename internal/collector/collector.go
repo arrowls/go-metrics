@@ -44,7 +44,9 @@ func New() MetricProvider {
 }
 
 func (c *Collector) Collect() {
-	memstats := new(runtime.MemStats)
+	memstats := runtime.MemStats{}
+
+	runtime.ReadMemStats(&memstats)
 
 	c.Mutex.Lock()
 	defer c.Mutex.Unlock()
