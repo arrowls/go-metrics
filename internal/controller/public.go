@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"html/template"
 	"net/http"
 
@@ -25,7 +24,6 @@ func (c *PublicController) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("./frontend/dist/index.html"))
 	data := c.service.Metric.GetList()
 
-	fmt.Println(*data)
 	err := tmpl.Execute(w, *data)
 
 	if err != nil {
