@@ -20,7 +20,7 @@ type Config struct {
 var config Config
 
 func InitConfig() {
-	config.ServerEndpoint = flag.String("s", serverEndpointDefault, "server endpoint url")
+	config.ServerEndpoint = flag.String("a", serverEndpointDefault, "server endpoint url")
 
 	flag.Parse()
 }

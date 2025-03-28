@@ -23,7 +23,7 @@ var config Config
 func InitConfig() {
 	config.ReportInterval = flag.Int("r", reportIntervalDefault, "report interval in seconds")
 	config.PollInterval = flag.Int("p", pollIntervalDefault, "collection interval in seconds")
-	config.ServerEndpoint = flag.String("s", serverEndpointDefault, "server endpoint url")
+	config.ServerEndpoint = flag.String("a", serverEndpointDefault, "server endpoint url")
 
 	flag.Parse()
 }
