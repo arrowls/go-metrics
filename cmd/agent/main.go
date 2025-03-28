@@ -8,8 +8,8 @@ import (
 	"github.com/arrowls/go-metrics/internal/updater"
 )
 
-const reportIntervalDefault = 2
-const pollIntervalDefault = 10
+const reportIntervalDefault = 10
+const pollIntervalDefault = 2
 const serverEndpointDefault = "localhost:8080"
 
 type Config struct {
