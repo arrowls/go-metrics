@@ -30,8 +30,8 @@ func (m *MockMetricsConsumer) Update() {
 
 func TestRunCollectionAndUpdate(t *testing.T) {
 	InitConfig()
-	var pollInterval = time.Duration(*config.PollInterval) * time.Second
-	var reportInterval = time.Duration(*config.ReportInterval) * time.Second
+	var pollInterval = time.Duration(config.PollInterval) * time.Second
+	var reportInterval = time.Duration(config.ReportInterval) * time.Second
 
 	fmt.Println("Testing RunCollectionAndUpdate() started")
 
