@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/arrowls/go-metrics/internal/collector"
 )
@@ -14,6 +15,9 @@ type Updater struct {
 }
 
 func New(provider collector.MetricProvider, serverURL string) MetricConsumer {
+	if !strings.HasPrefix(serverURL, "http://") {
+		serverURL = "http://" + serverURL
+	}
 	return &Updater{
 		provider,
 		serverURL,
@@ -41,20 +45,18 @@ func (u *Updater) Update() {
 func (u *Updater) postGauge(metricType string, metricValue float64) {
 	url := fmt.Sprintf("%s/update/gauge/%s/%f", u.serverURL, metricType, metricValue)
 
-	resp, err := http.Post(url, "text/plain", nil)
+	_, err := http.Post(url, "text/plain", http.NoBody)
 
 	if err != nil {
 		fmt.Printf("Error posting metric to server: %v\n", err)
 	}
 
-	resp.Body.Close()
 }
 func (u *Updater) postCounter(metricType string, metricValue int64) {
 	url := fmt.Sprintf("%s/update/counter/%s/%d", u.serverURL, metricType, metricValue)
-	resp, err := http.Post(url, "text/plain", nil)
+	_, err := http.Post(url, "text/plain", http.NoBody)
 
 	if err != nil {
 		fmt.Printf("Error posting metric to server: %v\n", err)
 	}
-	resp.Body.Close()
 }

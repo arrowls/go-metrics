@@ -1,22 +1,37 @@
 package main
 
 import (
+	"flag"
 	"time"
 
 	"github.com/arrowls/go-metrics/internal/collector"
 	"github.com/arrowls/go-metrics/internal/updater"
 )
 
-// env или argv
-const (
-	pollInterval   = 2 * time.Second
-	reportInterval = 10 * time.Second
-)
+const reportIntervalDefault = 2
+const pollIntervalDefault = 10
+const serverEndpointDefault = "localhost:8080"
+
+type Config struct {
+	ReportInterval *int
+	PollInterval   *int
+	ServerEndpoint *string
+}
+
+var config Config
+
+func InitConfig() {
+	config.ReportInterval = flag.Int("r", reportIntervalDefault, "report interval in seconds")
+	config.PollInterval = flag.Int("p", pollIntervalDefault, "collection interval in seconds")
+	config.ServerEndpoint = flag.String("s", serverEndpointDefault, "server endpoint url")
+
+	flag.Parse()
+}
 
 func main() {
+	InitConfig()
 	metricProvider := collector.New()
-	// env или argv
-	metricUpdater := updater.New(metricProvider, "http://localhost:8080")
+	metricUpdater := updater.New(metricProvider, *config.ServerEndpoint)
 
 	stopChan := make(chan struct{})
 
@@ -35,13 +50,13 @@ func RunCollectionAndUpdate(
 	go func() {
 		for {
 			provider.Collect()
-			time.Sleep(pollInterval)
+			time.Sleep(time.Duration(*config.PollInterval) * time.Second)
 		}
 	}()
 
 	go func() {
 		for {
-			time.Sleep(reportInterval)
+			time.Sleep(time.Duration(*config.ReportInterval) * time.Second)
 			consumer.Update()
 		}
 	}()
