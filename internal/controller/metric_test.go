@@ -47,100 +47,129 @@ func TestMetricController_HandleNew(t *testing.T) {
 
 	controller := NewMetricController(&service.Service{Metric: mockService})
 
-	t.Run("HandleNew/should create a new metric", func(t *testing.T) {
-		mockService.On("CreateByType", "gauge", "TestMetric", "1.23").Return(nil)
-		r := httptest.NewRequest(http.MethodPost, "/update/gauge/TestMetric/1.23", nil)
-		w := httptest.NewRecorder()
+	tests := []struct {
+		name         string
+		method       string
+		url          string
+		params       map[string]string
+		mockSetup    func()
+		expectedCode int
+		expectedBody string
+	}{
+		{
+			name:         "should create a new metric",
+			method:       http.MethodPost,
+			url:          "/update/gauge/TestMetric/1.23",
+			params:       map[string]string{"type": "gauge", "name": "TestMetric", "value": "1.23"},
+			mockSetup:    func() { mockService.On("CreateByType", "gauge", "TestMetric", "1.23").Return(nil) },
+			expectedCode: http.StatusOK,
+		},
+		{
+			name:         "empty value",
+			method:       http.MethodPost,
+			url:          "/update/gauge/TestMetric/",
+			params:       map[string]string{"type": "gauge", "name": "TestMetric", "value": ""},
+			expectedCode: http.StatusBadRequest,
+			expectedBody: "No metric value specified\n",
+		},
+		{
+			name:         "empty name",
+			method:       http.MethodPost,
+			url:          "/update/gauge//1.23",
+			params:       map[string]string{"type": "gauge", "name": "", "value": "1.23"},
+			expectedCode: http.StatusNotFound,
+			expectedBody: "No metric name specified\n",
+		},
+	}
 
-		r = createContext(r, map[string]string{
-			"type":  "gauge",
-			"name":  "TestMetric",
-			"value": "1.23",
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.mockSetup != nil {
+				tt.mockSetup()
+			}
+
+			r := httptest.NewRequest(tt.method, tt.url, nil)
+			w := httptest.NewRecorder()
+			r = createContext(r, tt.params)
+
+			if tt.method == http.MethodPost {
+				controller.HandleNew(w, r)
+			} else {
+				controller.HandleItem(w, r)
+			}
+
+			assert.Equal(t, tt.expectedCode, w.Code)
+			if tt.expectedBody != "" {
+				assert.Equal(t, tt.expectedBody, w.Body.String())
+			}
+
+			if tt.mockSetup != nil {
+				mockService.AssertExpectations(t)
+			}
 		})
+	}
+}
 
-		controller.HandleNew(w, r)
+func TestMetricController_HandleItem(t *testing.T) {
+	mockService := &MockMetricService{}
 
-		assert.Equal(t, http.StatusOK, w.Code)
+	controller := NewMetricController(&service.Service{Metric: mockService})
 
-		mockService.AssertCalled(t, "CreateByType", "gauge", "TestMetric", "1.23")
-	})
+	tests := []struct {
+		name         string
+		method       string
+		url          string
+		params       map[string]string
+		mockSetup    func()
+		expectedCode int
+		expectedBody string
+	}{
+		{
+			name:   "HandleItem/success case",
+			method: http.MethodGet,
+			url:    "/value/gauge/TestMetric",
+			params: map[string]string{
+				"type": "gauge",
+				"name": "TestMetric",
+			},
+			expectedBody: "123",
+			expectedCode: http.StatusOK,
+		},
+		{
+			name:   "HandleItem/invalid type",
+			method: http.MethodGet,
+			url:    "/value//TestMetric",
+			params: map[string]string{
+				"type": "",
+				"name": "TestMetric",
+			},
+			expectedCode: http.StatusNotFound,
+			expectedBody: "not found\n",
+		},
+		{
+			name:   "HandleItem/invalid name",
+			method: http.MethodGet,
+			url:    "/value/gauge/",
+			params: map[string]string{
+				"type": "gauge",
+				"name": "",
+			},
+			expectedCode: http.StatusNotFound,
+			expectedBody: "No metric name specified\n",
+		},
+	}
 
-	t.Run("HandleNew/empty value", func(t *testing.T) {
-		r := httptest.NewRequest(http.MethodPost, "/update/gauge/TestMetric/", nil)
-		w := httptest.NewRecorder()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := httptest.NewRequest(tt.method, tt.url, nil)
+			w := httptest.NewRecorder()
 
-		r = createContext(r, map[string]string{
-			"type":  "gauge",
-			"name":  "TestMetric",
-			"value": "",
+			r = createContext(r, tt.params)
+
+			controller.HandleItem(w, r)
+
+			assert.Equal(t, tt.expectedCode, w.Code)
+			assert.Equal(t, tt.expectedBody, w.Body.String())
 		})
-
-		controller.HandleNew(w, r)
-
-		assert.Equal(t, http.StatusBadRequest, w.Code)
-
-		assert.Equal(t, "No metric value specified\n", w.Body.String())
-	})
-
-	t.Run("HandleNew/empty name", func(t *testing.T) {
-		r := httptest.NewRequest(http.MethodPost, "/update/gauge//1.23", nil)
-		w := httptest.NewRecorder()
-
-		r = createContext(r, map[string]string{
-			"type":  "gauge",
-			"name":  "",
-			"value": "1.23",
-		})
-
-		controller.HandleNew(w, r)
-
-		assert.Equal(t, http.StatusNotFound, w.Code)
-
-		assert.Equal(t, "No metric name specified\n", w.Body.String())
-	})
-
-	t.Run("HandleItem/success case", func(t *testing.T) {
-		r := httptest.NewRequest(http.MethodGet, "/value/gauge/TestMetric", nil)
-		w := httptest.NewRecorder()
-
-		r = createContext(r, map[string]string{
-			"type": "gauge",
-			"name": "TestMetric",
-		})
-
-		controller.HandleItem(w, r)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-		assert.Equal(t, "123", w.Body.String())
-	})
-
-	t.Run("HandleItem/invalid type", func(t *testing.T) {
-		r := httptest.NewRequest(http.MethodGet, "/value//TestMetric", nil)
-		w := httptest.NewRecorder()
-
-		r = createContext(r, map[string]string{
-			"type": "",
-			"name": "TestMetric",
-		})
-
-		controller.HandleItem(w, r)
-
-		assert.Equal(t, http.StatusNotFound, w.Code)
-		assert.Contains(t, w.Body.String(), "not found")
-	})
-
-	t.Run("HandleItem/invalid name", func(t *testing.T) {
-		r := httptest.NewRequest(http.MethodGet, "/value/gauge/", nil)
-		w := httptest.NewRecorder()
-
-		r = createContext(r, map[string]string{
-			"type": "gauge",
-			"name": "",
-		})
-
-		controller.HandleItem(w, r)
-
-		assert.Equal(t, http.StatusNotFound, w.Code)
-		assert.Contains(t, w.Body.String(), "No metric name specified")
-	})
+	}
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/arrowls/go-metrics/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,16 +30,18 @@ func (m *MockMetricsConsumer) Update() {
 }
 
 func TestRunCollectionAndUpdate(t *testing.T) {
-	InitConfig()
-	var pollInterval = time.Duration(config.PollInterval) * time.Second
-	var reportInterval = time.Duration(config.ReportInterval) * time.Second
+	agentConfig := config.NewAgentConfig()
+	var pollInterval = time.Duration(agentConfig.PollInterval) * time.Second
+	var reportInterval = time.Duration(agentConfig.ReportInterval) * time.Second
+
+	fmt.Println(pollInterval, reportInterval)
 
 	fmt.Println("Testing RunCollectionAndUpdate() started")
 
 	provider := &MockMetricsProvider{}
 	consumer := &MockMetricsConsumer{}
 
-	RunCollectionAndUpdate(provider, consumer)
+	RunCollectionAndUpdate(provider, pollInterval, consumer, reportInterval)
 
 	time.Sleep(100 * time.Millisecond)
 

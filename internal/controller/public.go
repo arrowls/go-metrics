@@ -20,11 +20,14 @@ func (c *PublicController) HandlePublic(w http.ResponseWriter, r *http.Request) 
 }
 
 func (c *PublicController) HandleIndex(w http.ResponseWriter, r *http.Request) {
-	// SSR?
-	tmpl := template.Must(template.ParseFiles("./frontend/dist/index.html"))
+	tmpl, err := template.ParseFiles("./frontend/dist/index.html")
+	if err != nil {
+		http.Error(w, "Internal server error. Please try again later", http.StatusInternalServerError)
+		return
+	}
 	data := c.service.Metric.GetList()
 
-	err := tmpl.Execute(w, *data)
+	err = tmpl.Execute(w, *data)
 
 	if err != nil {
 		// page 500

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/arrowls/go-metrics/internal/service"
+	"github.com/arrowls/go-metrics/internal/validator"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -24,13 +25,7 @@ func (c *MetricController) HandleNew(rw http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	value := chi.URLParam(r, "value")
 
-	if value == "" {
-		http.Error(rw, "No metric value specified", http.StatusBadRequest)
-		return
-	}
-
-	if name == "" {
-		http.Error(rw, "No metric name specified", http.StatusNotFound)
+	if valid := validator.ValidateHandleNewRequest(rw, r); !valid {
 		return
 	}
 
@@ -46,8 +41,7 @@ func (c *MetricController) HandleItem(rw http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "type")
 	name := chi.URLParam(r, "name")
 
-	if name == "" {
-		http.Error(rw, "No metric name specified", http.StatusNotFound)
+	if valid := validator.ValidateHandleItemRequest(rw, r); !valid {
 		return
 	}
 
@@ -60,7 +54,7 @@ func (c *MetricController) HandleItem(rw http.ResponseWriter, r *http.Request) {
 	_, err = rw.Write([]byte(value))
 
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		http.Error(rw, "Произошла ошибка", http.StatusInternalServerError)
 		return
 	}
 }
