@@ -19,6 +19,7 @@ func GetInstance() *MemStorage {
 		instance = &MemStorage{
 			Gauge:   make(map[string]float64),
 			Counter: make(map[string]int64),
+			RWMutex: &sync.RWMutex{},
 		}
 	})
 	return instance
