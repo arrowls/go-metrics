@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Go metrics</title>
+    <script type="module" crossorigin src="/assets/index-Cm_mMqAT.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Bdb-oQ1I.css">
+  </head>
+  <body class="h-screen w-screen text-white bg-gray-900 flex flex-col">
+    <h1 class="text-5xl font-bold p-10">Метрики</h1>
+  <div class="min-h-0 flex-grow p-10 overflow-auto flex flex-wrap items-start">
+    {{range $name, $value := .}}
+      <div class="w-1/3">
+        {{ $name }} &mdash; {{ $value }}
+      </div>
+    {{end}}
+  </div>
+  </body>
+</html>
