@@ -3,8 +3,10 @@ package controller
 import (
 	"net/http"
 
+	"github.com/arrowls/go-metrics/internal/middleware"
 	"github.com/arrowls/go-metrics/internal/service"
 	"github.com/go-chi/chi/v5"
+	"github.com/sirupsen/logrus"
 )
 
 type Metric interface {
@@ -29,8 +31,9 @@ func NewController(services *service.Service) *Controller {
 	}
 }
 
-func (c *Controller) InitRoutes() *chi.Mux {
+func (c *Controller) InitRoutes(loggerInst *logrus.Logger) *chi.Mux {
 	router := chi.NewRouter()
+	router.Use(middleware.NewLoggingMiddleware(loggerInst))
 
 	router.Get("/assets/*", c.Public.HandlePublic)
 	router.Get("/", c.Public.HandleIndex)
