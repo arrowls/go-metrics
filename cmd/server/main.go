@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/arrowls/go-metrics/internal/apperrors"
 	"github.com/arrowls/go-metrics/internal/config"
@@ -27,5 +28,9 @@ func main() {
 
 	router := controllers.InitRoutes(loggerInst)
 
-	log.Fatal(http.ListenAndServe(serverConfig.ServerEndpoint, router))
+	log.Fatal(http.ListenAndServe(serverConfig.ServerEndpoint, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.URL.Path = strings.TrimSuffix(r.URL.Path, "//")
+		r.URL.Path = strings.TrimSuffix(r.URL.Path, "/")
+		router.ServeHTTP(w, r)
+	})))
 }
