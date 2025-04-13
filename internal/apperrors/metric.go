@@ -17,8 +17,14 @@ type ErrorResponseWithMessage struct {
 }
 
 func ErrorResponse(message string) string {
+	message = strings.Replace(message, "\n", "", -1)
+	message = strings.Trim(message, " \n")
+
+	messageSplit := strings.Split(message, "")
+	message = strings.ToUpper(messageSplit[0]) + strings.Join(messageSplit[1:], "")
+
 	response := ErrorResponseWithMessage{
-		strings.Trim(strings.Replace(message, "\n", "", -1), " \n"),
+		message,
 	}
 	responseBytes, _ := json.Marshal(response)
 	return string(responseBytes)
