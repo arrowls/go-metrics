@@ -68,7 +68,7 @@ func HTTPWithBodyToCreateMetric(r *http.Request) (*dto.CreateMetric, error) {
 		}
 		return &dto.CreateMetric{
 			Type:  requestBody.MType,
-			Value: fmt.Sprintf("%f", *requestBody.Value),
+			Value: strconv.FormatFloat(*requestBody.Value, 'f', -1, 64),
 			Name:  requestBody.ID,
 		}, nil
 	case "counter":
