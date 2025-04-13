@@ -208,7 +208,7 @@ func TestMetricController_HandleNewFromBody(t *testing.T) {
 				"value":1
 			}`),
 			mockSetup: func() {
-				mockService.On("Create", "gauge", "TestMetric", "1.000000").Return(nil)
+				mockService.On("Create", "gauge", "TestMetric", "1").Return(nil)
 			},
 		},
 		{
@@ -225,7 +225,7 @@ func TestMetricController_HandleNewFromBody(t *testing.T) {
 			}`),
 			expectedStatusCode: http.StatusBadRequest,
 			mockSetup: func() {
-				mockService.On("Create", "gauge", "TestMetric", "2.000000").Return(apperrors.ErrBadRequest)
+				mockService.On("Create", "gauge", "TestMetric", "2").Return(apperrors.ErrBadRequest)
 			},
 		},
 	}
