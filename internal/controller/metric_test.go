@@ -1,14 +1,19 @@
 package controller
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/arrowls/go-metrics/internal/apperrors"
+	"github.com/arrowls/go-metrics/internal/dto"
 	"github.com/arrowls/go-metrics/internal/service"
 	"github.com/go-chi/chi/v5"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -17,8 +22,8 @@ type MockMetricService struct {
 	mock.Mock
 }
 
-func (s *MockMetricService) CreateByType(metricType string, name string, stringValue string) error {
-	args := s.Called(metricType, name, stringValue)
+func (s *MockMetricService) Create(dto *dto.CreateMetric) error {
+	args := s.Called(dto.Type, dto.Name, dto.Value)
 
 	return args.Error(0)
 }
@@ -26,8 +31,8 @@ func (s *MockMetricService) CreateByType(metricType string, name string, stringV
 func (s *MockMetricService) GetList() *map[string]interface{} {
 	return &map[string]interface{}{}
 }
-func (s *MockMetricService) GetItem(metricType string, name string) (string, error) {
-	if metricType != "" && name != "" {
+func (s *MockMetricService) GetItem(dto *dto.GetMetric) (string, error) {
+	if dto.Type != "" && dto.Name != "" {
 		return "123", nil
 	}
 	return "", errors.New("not found")
@@ -44,8 +49,11 @@ func createContext(r *http.Request, params map[string]string) *http.Request {
 
 func TestMetricController_HandleNew(t *testing.T) {
 	mockService := &MockMetricService{}
+	mockLogger := logrus.New()
+	mockLogger.SetOutput(io.Discard)
+	errorHandler := apperrors.NewHTTPErrorHandler(mockLogger)
 
-	controller := NewMetricController(&service.Service{Metric: mockService})
+	controller := NewMetricController(&service.Service{Metric: mockService}, errorHandler)
 
 	tests := []struct {
 		name         string
@@ -61,7 +69,7 @@ func TestMetricController_HandleNew(t *testing.T) {
 			method:       http.MethodPost,
 			url:          "/update/gauge/TestMetric/1.23",
 			params:       map[string]string{"type": "gauge", "name": "TestMetric", "value": "1.23"},
-			mockSetup:    func() { mockService.On("CreateByType", "gauge", "TestMetric", "1.23").Return(nil) },
+			mockSetup:    func() { mockService.On("Create", "gauge", "TestMetric", "1.23").Return(nil) },
 			expectedCode: http.StatusOK,
 		},
 		{
@@ -70,7 +78,7 @@ func TestMetricController_HandleNew(t *testing.T) {
 			url:          "/update/gauge/TestMetric/",
 			params:       map[string]string{"type": "gauge", "name": "TestMetric", "value": ""},
 			expectedCode: http.StatusBadRequest,
-			expectedBody: "No metric value specified\n",
+			expectedBody: `{"message":"Ошибка при чтении запроса: не указано значение метрики"}` + "\n",
 		},
 		{
 			name:         "empty name",
@@ -78,7 +86,7 @@ func TestMetricController_HandleNew(t *testing.T) {
 			url:          "/update/gauge//1.23",
 			params:       map[string]string{"type": "gauge", "name": "", "value": "1.23"},
 			expectedCode: http.StatusNotFound,
-			expectedBody: "No metric name specified\n",
+			expectedBody: `{"message":"Ошибка при чтении запроса: не указано имя метрики"}` + "\n",
 		},
 	}
 
@@ -112,8 +120,11 @@ func TestMetricController_HandleNew(t *testing.T) {
 
 func TestMetricController_HandleItem(t *testing.T) {
 	mockService := &MockMetricService{}
+	mockLogger := logrus.New()
+	mockLogger.SetOutput(io.Discard)
+	errorHandler := apperrors.NewHTTPErrorHandler(mockLogger)
 
-	controller := NewMetricController(&service.Service{Metric: mockService})
+	controller := NewMetricController(&service.Service{Metric: mockService}, errorHandler)
 
 	tests := []struct {
 		name         string
@@ -144,7 +155,7 @@ func TestMetricController_HandleItem(t *testing.T) {
 				"name": "TestMetric",
 			},
 			expectedCode: http.StatusNotFound,
-			expectedBody: "not found\n",
+			expectedBody: `{"message":"Ошибка при чтении запроса: неизвестный тип метрики:"}` + "\n",
 		},
 		{
 			name:   "HandleItem/invalid name",
@@ -155,7 +166,7 @@ func TestMetricController_HandleItem(t *testing.T) {
 				"name": "",
 			},
 			expectedCode: http.StatusNotFound,
-			expectedBody: "No metric name specified\n",
+			expectedBody: `{"message":"Ошибка при чтении запроса: не указано имя метрики"}` + "\n",
 		},
 	}
 
@@ -167,6 +178,127 @@ func TestMetricController_HandleItem(t *testing.T) {
 			r = createContext(r, tt.params)
 
 			controller.HandleItem(w, r)
+
+			assert.Equal(t, tt.expectedCode, w.Code)
+			assert.Equal(t, tt.expectedBody, w.Body.String())
+		})
+	}
+}
+
+func TestMetricController_HandleNewFromBody(t *testing.T) {
+	mockService := &MockMetricService{}
+	mockLogger := logrus.New()
+	mockLogger.SetOutput(io.Discard)
+	errorHandler := apperrors.NewHTTPErrorHandler(mockLogger)
+
+	controller := NewMetricController(&service.Service{Metric: mockService}, errorHandler)
+
+	tests := []struct {
+		name               string
+		expectedStatusCode int
+		body               []byte
+		mockSetup          func()
+	}{
+		{
+			name:               "success case",
+			expectedStatusCode: 200,
+			body: []byte(`{
+				"type":"gauge",
+				"id":"TestMetric",
+				"value":1
+			}`),
+			mockSetup: func() {
+				mockService.On("Create", "gauge", "TestMetric", "1.000000").Return(nil)
+			},
+		},
+		{
+			name:               "error in mapper",
+			body:               nil,
+			expectedStatusCode: http.StatusBadRequest,
+		},
+		{
+			name: "error in service",
+			body: []byte(`{
+				"type":"gauge",
+				"id":"TestMetric",
+				"value":2
+			}`),
+			expectedStatusCode: http.StatusBadRequest,
+			mockSetup: func() {
+				mockService.On("Create", "gauge", "TestMetric", "2.000000").Return(apperrors.ErrBadRequest)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.mockSetup != nil {
+				tt.mockSetup()
+			}
+
+			body := bytes.NewReader(tt.body)
+			r := httptest.NewRequest("POST", "/update", body)
+			w := httptest.NewRecorder()
+
+			controller.HandleNewFromBody(w, r)
+
+			assert.Equal(t, tt.expectedStatusCode, w.Code)
+			bodyBytes, err := io.ReadAll(w.Body)
+			assert.Nil(t, err)
+			if tt.expectedStatusCode == http.StatusOK {
+				assert.Contains(t, string(bodyBytes), `"value":123`)
+			}
+		})
+	}
+}
+
+func TestMetricController_HandleGetItemFromBody(t *testing.T) {
+	mockService := &MockMetricService{}
+	mockLogger := logrus.New()
+	mockLogger.SetOutput(io.Discard)
+	errorHandler := apperrors.NewHTTPErrorHandler(mockLogger)
+
+	controller := NewMetricController(&service.Service{Metric: mockService}, errorHandler)
+
+	tests := []struct {
+		name         string
+		mockSetup    func()
+		expectedCode int
+		expectedBody string
+		body         []byte
+	}{
+		{
+			name:         "success case",
+			expectedBody: `{"id":"TestMetric","type":"gauge","value":123}`,
+			expectedCode: http.StatusOK,
+			body: []byte(`{
+				"type":"gauge",
+				"id":"TestMetric"
+			}`),
+		},
+		{
+			name:         "error in mapper",
+			expectedCode: http.StatusBadRequest,
+			expectedBody: `{"message":"Ошибка при чтении запроса: не удалось прочитать тело запроса"}` + "\n",
+			body: []byte(`{
+				"type":"invalid_type",
+				"id":"TestMetric",
+			}`),
+		},
+		{
+			name:         "error in service",
+			expectedCode: http.StatusBadRequest,
+			expectedBody: `{"message":"Ошибка при чтении запроса: не удалось прочитать тело запроса"}` + "\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := bytes.NewReader(tt.body)
+			r := httptest.NewRequest(http.MethodPost, "/value", body)
+			w := httptest.NewRecorder()
+
+			controller.HandleGetItemFromBody(w, r)
 
 			assert.Equal(t, tt.expectedCode, w.Code)
 			assert.Equal(t, tt.expectedBody, w.Body.String())
