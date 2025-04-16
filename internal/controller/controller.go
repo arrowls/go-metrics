@@ -39,6 +39,7 @@ func NewController(services *service.Service, handler ErrorHandler) *Controller 
 
 func (c *Controller) InitRoutes(loggerInst *logrus.Logger) *chi.Mux {
 	router := chi.NewRouter()
+	router.Use(middleware.NewCompressionMiddleware)
 	router.Use(middleware.NewLoggingMiddleware(loggerInst))
 
 	router.Get("/assets/*", c.Public.HandlePublic)

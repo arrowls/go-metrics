@@ -2,6 +2,7 @@ package apperrors
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/sirupsen/logrus"
@@ -23,6 +24,7 @@ func (h *HTTPErrorHandler) Handle(w http.ResponseWriter, err error) {
 		http.Error(w, ErrorResponse("Неизвестная ошибка"), http.StatusInternalServerError)
 		h.logger.Errorf("произошла неизвестная ошибка в приложении: %s", err.Error())
 	}
+	fmt.Println(err.Error())
 }
 
 func NewHTTPErrorHandler(logger *logrus.Logger) *HTTPErrorHandler {
