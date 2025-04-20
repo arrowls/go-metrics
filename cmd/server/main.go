@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/arrowls/go-metrics/internal/apperrors"
 	"github.com/arrowls/go-metrics/internal/config"
@@ -22,7 +23,13 @@ func main() {
 
 	serverConfig := config.NewServerConfig()
 	storage := memstorage.GetInstance()
-	repo := repository.NewRepository(storage)
+	repo := repository.WithRestore(
+		repository.NewRepository(storage),
+		time.Duration(serverConfig.StoreInterval)*time.Second,
+		serverConfig.StorageFilePath,
+		serverConfig.Restore,
+		loggerInst,
+	)
 	services := service.NewService(repo)
 	controllers := controller.NewController(services, errorHandler)
 

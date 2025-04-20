@@ -37,6 +37,8 @@ func (m *MetricRepository) GetAll() memstorage.MemStorage {
 }
 
 func (m *MetricRepository) GetGaugeItem(name string) (float64, error) {
+	m.storage.Lock()
+	defer m.storage.Unlock()
 	item, ok := m.storage.Gauge[name]
 
 	if !ok {
@@ -47,6 +49,8 @@ func (m *MetricRepository) GetGaugeItem(name string) (float64, error) {
 }
 
 func (m *MetricRepository) GetCounterItem(name string) (int64, error) {
+	m.storage.Lock()
+	defer m.storage.Unlock()
 	item, ok := m.storage.Counter[name]
 
 	if !ok {
