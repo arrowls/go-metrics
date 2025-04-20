@@ -1,12 +1,15 @@
 package updater
 
 import (
+	"compress/gzip"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/arrowls/go-metrics/internal/dto"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type MockProvider struct{}
@@ -23,20 +26,33 @@ func (p MockProvider) AsMap() *map[string]interface{} {
 func (p MockProvider) Collect() {}
 
 func TestUpdater_Update(t *testing.T) {
-	caughtRequestsMap := map[string]bool{
-		"/update/counter/MetricName1/1":      false,
-		"/update/gauge/MetricName2/2.220000": false,
-		"/update/counter/MetricName3/3":      false,
-		"/update/gauge/MetricName4/4.400000": false,
-	}
+	data := *MockProvider{}.AsMap()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		value, found := caughtRequestsMap[r.URL.Path]
+		reader, err := gzip.NewReader(r.Body)
+		assert.Nil(t, err)
 
-		require.Truef(t, found, "%s not found in caught requests", r.URL.Path)
-		require.Falsef(t, value, "Metric update called more than once: %s", r.URL.Path)
+		body, err := io.ReadAll(reader)
+		assert.Nil(t, err)
 
-		caughtRequestsMap[r.URL.Path] = true
+		var metric dto.Metrics
+
+		err = json.Unmarshal(body, &metric)
+		assert.Nil(t, err)
+
+		value, found := data[metric.ID]
+
+		assert.True(t, found)
+
+		switch v := value.(type) {
+		case float64:
+			assert.Equal(t, v, *metric.Value)
+		case int64:
+			assert.Equal(t, v, *metric.Delta)
+		default:
+			t.Errorf("unknown metric type: %T", value)
+
+		}
 	}))
 
 	defer server.Close()
@@ -45,8 +61,4 @@ func TestUpdater_Update(t *testing.T) {
 	updater := New(mockProvider, server.URL)
 
 	updater.Update()
-
-	for url, caught := range caughtRequestsMap {
-		assert.Truef(t, caught, "expected to catch a request to %s", url)
-	}
 }

@@ -140,3 +140,22 @@ func HTTPWithBodyToGetMetric(r *http.Request) (*dto.GetMetric, error) {
 		Name: requestBody.ID,
 	}, nil
 }
+
+func MetricToDTO(name string, value interface{}) (*dto.Metrics, error) {
+	metric := &dto.Metrics{
+		ID: name,
+	}
+
+	switch v := value.(type) {
+	case float64:
+		metric.Value = &v
+		metric.MType = "gauge"
+	case int64:
+		metric.Delta = &v
+		metric.MType = "counter"
+	default:
+		return nil, fmt.Errorf("unknow metric value: %d of type %T", value, value)
+	}
+
+	return metric, nil
+}
