@@ -115,8 +115,8 @@ func TestMetricService_CreateByType(t *testing.T) {
 		metricMap := service.GetList()
 
 		assert.Equal(t, *metricMap, map[string]interface{}{
-			"key1.1": float64(1.1),
-			"key2.2": float64(2.2),
+			"key1.1": 1.1,
+			"key2.2": 2.2,
 			"key1":   int64(1),
 			"key2":   int64(2),
 		})

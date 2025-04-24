@@ -27,10 +27,10 @@ type Metrics struct {
 
 func (m *Metrics) Validate() error {
 	if m.ID == "" {
-		return errors.Join(apperrors.ErrBadRequest, fmt.Errorf("не указано имя метрики"))
+		return errors.Join(apperrors.ErrBadRequest, fmt.Errorf("metric name not specified"))
 	}
 	if m.MType != "gauge" && m.MType != "counter" {
-		return errors.Join(apperrors.ErrNotFound, fmt.Errorf("неизвестный тип метрики: %s", m.MType))
+		return errors.Join(apperrors.ErrNotFound, fmt.Errorf("unknown metric type: %s", m.MType))
 	}
 	return nil
 }

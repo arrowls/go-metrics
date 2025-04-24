@@ -70,7 +70,11 @@ func NewCompressionMiddleware(next http.Handler) http.Handler {
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			compressWriter := NewCompressWriter(w)
 			writer = compressWriter
-			defer compressWriter.Close()
+			defer func() {
+				if errClose := compressWriter.Close(); errClose != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+			}()
 			writer.Header().Set("Content-Encoding", "gzip")
 		}
 
@@ -78,8 +82,14 @@ func NewCompressionMiddleware(next http.Handler) http.Handler {
 			reader, err := NewCompressReader(r.Body)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
-			defer reader.Close()
+
+			defer func() {
+				if errClose := reader.Close(); errClose != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+			}()
 
 			r.Body = reader
 		}

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"time"
@@ -47,7 +48,11 @@ func (r *restorableRepository) runSyncAction() {
 		return
 	}
 
-	defer file.Close()
+	defer func() {
+		if errClose := file.Close(); err != nil {
+			err = errors.Join(err, errClose)
+		}
+	}()
 
 	data := r.GetAll()
 

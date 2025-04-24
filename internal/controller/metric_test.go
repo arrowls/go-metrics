@@ -78,7 +78,7 @@ func TestMetricController_HandleNew(t *testing.T) {
 			url:          "/update/gauge/TestMetric/",
 			params:       map[string]string{"type": "gauge", "name": "TestMetric", "value": ""},
 			expectedCode: http.StatusBadRequest,
-			expectedBody: `{"message":"Ошибка при чтении запроса: не указано значение метрики"}` + "\n",
+			expectedBody: `{"message":"Failed to read request: metric value not specified"}` + "\n",
 		},
 		{
 			name:         "empty name",
@@ -86,7 +86,7 @@ func TestMetricController_HandleNew(t *testing.T) {
 			url:          "/update/gauge//1.23",
 			params:       map[string]string{"type": "gauge", "name": "", "value": "1.23"},
 			expectedCode: http.StatusNotFound,
-			expectedBody: `{"message":"Ошибка при чтении запроса: не указано имя метрики"}` + "\n",
+			expectedBody: `{"message":"Failed to read request: metric name not specified"}` + "\n",
 		},
 	}
 
@@ -155,7 +155,7 @@ func TestMetricController_HandleItem(t *testing.T) {
 				"name": "TestMetric",
 			},
 			expectedCode: http.StatusNotFound,
-			expectedBody: `{"message":"Ошибка при чтении запроса: неизвестный тип метрики:"}` + "\n",
+			expectedBody: `{"message":"Failed to read request: unknown metric type:"}` + "\n",
 		},
 		{
 			name:   "HandleItem/invalid name",
@@ -166,7 +166,7 @@ func TestMetricController_HandleItem(t *testing.T) {
 				"name": "",
 			},
 			expectedCode: http.StatusNotFound,
-			expectedBody: `{"message":"Ошибка при чтении запроса: не указано имя метрики"}` + "\n",
+			expectedBody: `{"message":"Failed to read request: metric name is not specified"}` + "\n",
 		},
 	}
 
@@ -279,7 +279,7 @@ func TestMetricController_HandleGetItemFromBody(t *testing.T) {
 		{
 			name:         "error in mapper",
 			expectedCode: http.StatusBadRequest,
-			expectedBody: `{"message":"Ошибка при чтении запроса: не удалось прочитать тело запроса"}` + "\n",
+			expectedBody: `{"message":"Error reading request: could not read the request body"}` + "\n",
 			body: []byte(`{
 				"type":"invalid_type",
 				"id":"TestMetric",
@@ -288,7 +288,7 @@ func TestMetricController_HandleGetItemFromBody(t *testing.T) {
 		{
 			name:         "error in service",
 			expectedCode: http.StatusBadRequest,
-			expectedBody: `{"message":"Ошибка при чтении запроса: не удалось прочитать тело запроса"}` + "\n",
+			expectedBody: `{"message":"Error reading request: could not read the request body"}` + "\n",
 		},
 	}
 

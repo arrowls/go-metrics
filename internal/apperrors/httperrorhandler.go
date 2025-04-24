@@ -20,8 +20,8 @@ func (h *HTTPErrorHandler) Handle(w http.ResponseWriter, err error) {
 	case err == nil:
 		return
 	default:
-		http.Error(w, ErrorResponse("Неизвестная ошибка"), http.StatusInternalServerError)
-		h.logger.Errorf("произошла неизвестная ошибка в приложении: %s", err.Error())
+		http.Error(w, ErrorResponse("Unknown error"), http.StatusInternalServerError)
+		h.logger.Errorf("an unknown error occurred in the application: %s", err.Error())
 	}
 }
 

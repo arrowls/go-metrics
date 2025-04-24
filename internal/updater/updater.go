@@ -56,8 +56,10 @@ func (u *Updater) updateFromDto(updateDto *dto.Metrics) {
 		return
 	}
 
-	gz.Close()
-
+	if errClose := gz.Close(); errClose != nil {
+		fmt.Printf("Error closing gzip writer: %+v", errClose)
+		return
+	}
 	req, err := http.NewRequest("POST", u.serverURL+"/update", &buf)
 	if err != nil {
 		fmt.Printf("Error creating request: %v\n", err)
@@ -71,5 +73,10 @@ func (u *Updater) updateFromDto(updateDto *dto.Metrics) {
 		fmt.Printf("Error posting metric: %v\n", err)
 		return
 	}
-	res.Body.Close()
+
+	defer func() {
+		if errClose := res.Body.Close(); errClose != nil {
+			fmt.Printf("Error closing Body: %+v", errClose)
+		}
+	}()
 }

@@ -16,13 +16,11 @@ func HTTPToCreateMetric(r *http.Request) (*dto.CreateMetric, error) {
 	metricType := chi.URLParam(r, "type")
 	name := chi.URLParam(r, "name")
 	value := chi.URLParam(r, "value")
-
 	if value == "" {
-		return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("не указано значение метрики"))
+		return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("metric value not specified"))
 	}
-
 	if name == "" {
-		return nil, errors.Join(apperrors.ErrNotFound, fmt.Errorf("не указано имя метрики"))
+		return nil, errors.Join(apperrors.ErrNotFound, fmt.Errorf("metric name not specified"))
 	}
 
 	return &dto.CreateMetric{
@@ -37,10 +35,10 @@ func HTTPToGetMetric(r *http.Request) (*dto.GetMetric, error) {
 	name := chi.URLParam(r, "name")
 
 	if name == "" {
-		return nil, errors.Join(apperrors.ErrNotFound, fmt.Errorf("не указано имя метрики"))
+		return nil, errors.Join(apperrors.ErrNotFound, fmt.Errorf("metric name is not specified"))
 	}
 	if metricType != "gauge" && metricType != "counter" {
-		return nil, errors.Join(apperrors.ErrNotFound, fmt.Errorf("неизвестный тип метрики: %s", metricType))
+		return nil, errors.Join(apperrors.ErrNotFound, fmt.Errorf("unknown metric type: %s", metricType))
 	}
 
 	return &dto.GetMetric{
@@ -53,7 +51,7 @@ func HTTPWithBodyToCreateMetric(r *http.Request) (*dto.CreateMetric, error) {
 	var requestBody dto.Metrics
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
-		return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("не удалось прочитать тело запроса"))
+		return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("failed to read the body of the request"))
 	}
 
 	err = requestBody.Validate()
@@ -64,25 +62,17 @@ func HTTPWithBodyToCreateMetric(r *http.Request) (*dto.CreateMetric, error) {
 	switch requestBody.MType {
 	case "gauge":
 		if requestBody.Value == nil {
-			return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("не указано значение gauge"))
+			return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("no value for gauge specified"))
 		}
-		return &dto.CreateMetric{
-			Type:  requestBody.MType,
-			Value: strconv.FormatFloat(*requestBody.Value, 'f', -1, 64),
-			Name:  requestBody.ID,
-		}, nil
+
+		return &dto.CreateMetric{Type: requestBody.MType, Value: strconv.FormatFloat(*requestBody.Value, 'f', -1, 64), Name: requestBody.ID}, nil
 	case "counter":
 		if requestBody.Delta == nil {
-			return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("не указано значение counter"))
+			return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("no value for counter specified"))
 		}
-		return &dto.CreateMetric{
-			Type:  requestBody.MType,
-			Value: fmt.Sprintf("%d", *requestBody.Delta),
-			Name:  requestBody.ID,
-		}, nil
-
+		return &dto.CreateMetric{Type: requestBody.MType, Value: fmt.Sprintf("%d", *requestBody.Delta), Name: requestBody.ID}, nil
 	default:
-		return nil, errors.Join(apperrors.ErrNotFound, fmt.Errorf("неизвестный тип метрики: %s", requestBody.MType))
+		return nil, errors.Join(apperrors.ErrNotFound, fmt.Errorf("unknown metric type: %s", requestBody.MType))
 	}
 }
 
@@ -92,28 +82,18 @@ func CreateDTOToHTTPRes(createDto *dto.CreateMetric, value string) ([]byte, erro
 	case "gauge":
 		val, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			return nil, fmt.Errorf("ошибка при чтении значения %s", createDto.Name)
+			return nil, fmt.Errorf("error while reading the value %s", createDto.Name)
 		}
 
-		metric = &dto.Metrics{
-			ID:    createDto.Name,
-			MType: createDto.Type,
-			Value: &val,
-		}
+		metric = &dto.Metrics{ID: createDto.Name, MType: createDto.Type, Value: &val}
 	case "counter":
 		deltaVal, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("ошибка при чтении значения counter %s", createDto.Name)
+			return nil, fmt.Errorf("error while reading the value of counter %s", createDto.Name)
 		}
-
-		metric = &dto.Metrics{
-			ID:    createDto.Name,
-			MType: createDto.Type,
-			Delta: &deltaVal,
-		}
-
+		metric = &dto.Metrics{ID: createDto.Name, MType: createDto.Type, Delta: &deltaVal}
 	default:
-		return nil, errors.Join(apperrors.ErrNotFound, fmt.Errorf("неизвестный тип метрики: %s", createDto.Type))
+		return nil, errors.Join(apperrors.ErrNotFound, fmt.Errorf("unknown metric type: %s", createDto.Type))
 	}
 
 	jsonResp, err := json.Marshal(metric)
@@ -127,7 +107,7 @@ func HTTPWithBodyToGetMetric(r *http.Request) (*dto.GetMetric, error) {
 	var requestBody dto.Metrics
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
-		return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("не удалось прочитать тело запроса"))
+		return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("could not read the request body"))
 	}
 
 	err = requestBody.Validate()

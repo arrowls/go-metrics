@@ -40,8 +40,7 @@ func (m *MetricService) Create(dto *dto.CreateMetric) error {
 		m.repository.Metric.AddCounterValue(dto.Name, parsedValue)
 		return nil
 	}
-
-	return errors.Join(apperrors.ErrBadRequest, fmt.Errorf("неизвестный тип метрики: %s", dto.Type))
+	return errors.Join(apperrors.ErrBadRequest, fmt.Errorf("unknown metric type: %s", dto.Type))
 }
 
 func (m *MetricService) GetList() *map[string]interface{} {
@@ -81,5 +80,5 @@ func (m *MetricService) GetItem(dto *dto.GetMetric) (string, error) {
 		return strconv.FormatInt(value, 10), nil
 	}
 
-	return "", errors.Join(apperrors.ErrBadRequest, fmt.Errorf("неизвестный тип метрики: %s", dto.Type))
+	return "", errors.Join(apperrors.ErrBadRequest, fmt.Errorf("unknown metric type: %s", dto.Type))
 }

@@ -42,7 +42,7 @@ func (m *MetricRepository) GetGaugeItem(name string) (float64, error) {
 	item, ok := m.storage.Gauge[name]
 
 	if !ok {
-		return 0, errors.Join(apperrors.ErrNotFound, fmt.Errorf("gauge %s не найден", name))
+		return 0, errors.Join(apperrors.ErrNotFound, fmt.Errorf("gauge %s not found", name))
 	}
 
 	return item, nil
@@ -54,7 +54,7 @@ func (m *MetricRepository) GetCounterItem(name string) (int64, error) {
 	item, ok := m.storage.Counter[name]
 
 	if !ok {
-		return 0, errors.Join(apperrors.ErrNotFound, fmt.Errorf("counter %s не найден", name))
+		return 0, errors.Join(apperrors.ErrNotFound, fmt.Errorf("counter %s not found", name))
 	}
 
 	return item, nil

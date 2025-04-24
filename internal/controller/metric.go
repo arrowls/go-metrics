@@ -27,13 +27,13 @@ func (c *MetricController) HandleNew(rw http.ResponseWriter, r *http.Request) {
 
 	createDto, err := mappers.HTTPToCreateMetric(r)
 	if err != nil {
-		c.errorHandler.Handle(rw, fmt.Errorf("ошибка при чтении запроса: %w ", err))
+		c.errorHandler.Handle(rw, fmt.Errorf("failed to read request: %w", err))
 		return
 	}
 
 	err = c.service.Metric.Create(createDto)
 	if err != nil {
-		c.errorHandler.Handle(rw, fmt.Errorf("ошибка при создании метрики: %w ", err))
+		c.errorHandler.Handle(rw, fmt.Errorf("failed to create metric: %w", err))
 	}
 }
 
@@ -42,13 +42,13 @@ func (c *MetricController) HandleItem(rw http.ResponseWriter, r *http.Request) {
 
 	getItemDto, err := mappers.HTTPToGetMetric(r)
 	if err != nil {
-		c.errorHandler.Handle(rw, fmt.Errorf("ошибка при чтении запроса: %w ", err))
+		c.errorHandler.Handle(rw, fmt.Errorf("failed to read request: %w", err))
 		return
 	}
 
 	value, err := c.service.Metric.GetItem(getItemDto)
 	if err != nil {
-		c.errorHandler.Handle(rw, fmt.Errorf("не удалось получить метрику: %w ", err))
+		c.errorHandler.Handle(rw, fmt.Errorf("failed to get metric: %w", err))
 		return
 	}
 
@@ -63,13 +63,13 @@ func (c *MetricController) HandleNewFromBody(rw http.ResponseWriter, r *http.Req
 
 	createDto, err := mappers.HTTPWithBodyToCreateMetric(r)
 	if err != nil {
-		c.errorHandler.Handle(rw, fmt.Errorf("ошибка при чтении запроса: %w ", err))
+		c.errorHandler.Handle(rw, fmt.Errorf("failed to read request: %w", err))
 		return
 	}
 
 	err = c.service.Metric.Create(createDto)
 	if err != nil {
-		c.errorHandler.Handle(rw, fmt.Errorf("ошибка при создании метрики: %w ", err))
+		c.errorHandler.Handle(rw, fmt.Errorf("failed to create metric: %w", err))
 		return
 	}
 
@@ -78,7 +78,7 @@ func (c *MetricController) HandleNewFromBody(rw http.ResponseWriter, r *http.Req
 		Name: createDto.Name,
 	})
 	if err != nil {
-		c.errorHandler.Handle(rw, fmt.Errorf("не удалось получить метрику: %w ", err))
+		c.errorHandler.Handle(rw, fmt.Errorf("failed to get metric: %w", err))
 		return
 	}
 
@@ -87,7 +87,10 @@ func (c *MetricController) HandleNewFromBody(rw http.ResponseWriter, r *http.Req
 		c.errorHandler.Handle(rw, apperrors.ErrUnknown)
 	}
 
-	rw.Write(response)
+	_, err = rw.Write(response)
+	if err != nil {
+		c.errorHandler.Handle(rw, apperrors.ErrUnknown)
+	}
 }
 
 func (c *MetricController) HandleGetItemFromBody(rw http.ResponseWriter, r *http.Request) {
@@ -95,13 +98,13 @@ func (c *MetricController) HandleGetItemFromBody(rw http.ResponseWriter, r *http
 
 	getItemDto, err := mappers.HTTPWithBodyToGetMetric(r)
 	if err != nil {
-		c.errorHandler.Handle(rw, fmt.Errorf("ошибка при чтении запроса: %w ", err))
+		c.errorHandler.Handle(rw, fmt.Errorf("error reading request: %w ", err))
 		return
 	}
 
 	value, err := c.service.Metric.GetItem(getItemDto)
 	if err != nil {
-		c.errorHandler.Handle(rw, fmt.Errorf("не удалось получить метрику: %w ", err))
+		c.errorHandler.Handle(rw, fmt.Errorf("failed to fetch metric: %w", err))
 		return
 	}
 
@@ -113,5 +116,8 @@ func (c *MetricController) HandleGetItemFromBody(rw http.ResponseWriter, r *http
 		c.errorHandler.Handle(rw, apperrors.ErrUnknown)
 	}
 
-	rw.Write(response)
+	_, err = rw.Write(response)
+	if err != nil {
+		c.errorHandler.Handle(rw, apperrors.ErrUnknown)
+	}
 }
