@@ -17,18 +17,26 @@ import (
 	"github.com/arrowls/go-metrics/internal/memstorage"
 	"github.com/arrowls/go-metrics/internal/repository"
 	"github.com/arrowls/go-metrics/internal/service"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
 	loggerInst := logger.NewLogger()
-	loggerInst.Info("Starting application")
 
 	errorHandler := apperrors.NewHTTPErrorHandler(loggerInst)
 
 	serverConfig := config.NewServerConfig()
+
+	loggerInst.Info("Starting application on " + serverConfig.ServerEndpoint)
+
+	pool, err := pgxpool.New(context.Background(), serverConfig.DatabaseDSN)
+	if err != nil {
+		loggerInst.Fatal("failed to connect to database: " + err.Error())
+	}
+
 	storage := memstorage.GetInstance()
 	repo := repository.WithRestore(
-		repository.NewRepository(storage),
+		repository.NewRepository(storage, pool),
 		time.Duration(serverConfig.StoreInterval)*time.Second,
 		serverConfig.StorageFilePath,
 		serverConfig.Restore,

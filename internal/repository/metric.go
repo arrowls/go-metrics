@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -12,31 +13,31 @@ type MetricRepository struct {
 	storage *memstorage.MemStorage
 }
 
-func NewMetricRepository(storage *memstorage.MemStorage) *MetricRepository {
+func NewMetricRepository(storage *memstorage.MemStorage) Metric {
 	return &MetricRepository{
 		storage: storage,
 	}
 }
 
-func (m *MetricRepository) AddGaugeValue(name string, value float64) {
+func (m *MetricRepository) AddGaugeValue(_ context.Context, name string, value float64) {
 	m.storage.Lock()
 	defer m.storage.Unlock()
 
 	m.storage.Gauge[name] = value
 }
 
-func (m *MetricRepository) AddCounterValue(name string, value int64) {
+func (m *MetricRepository) AddCounterValue(_ context.Context, name string, value int64) {
 	m.storage.Lock()
 	defer m.storage.Unlock()
 
 	m.storage.Counter[name] += value
 }
 
-func (m *MetricRepository) GetAll() memstorage.MemStorage {
+func (m *MetricRepository) GetAll(ctx context.Context) memstorage.MemStorage {
 	return *m.storage
 }
 
-func (m *MetricRepository) GetGaugeItem(name string) (float64, error) {
+func (m *MetricRepository) GetGaugeItem(_ context.Context, name string) (float64, error) {
 	m.storage.Lock()
 	defer m.storage.Unlock()
 	item, ok := m.storage.Gauge[name]
@@ -48,7 +49,7 @@ func (m *MetricRepository) GetGaugeItem(name string) (float64, error) {
 	return item, nil
 }
 
-func (m *MetricRepository) GetCounterItem(name string) (int64, error) {
+func (m *MetricRepository) GetCounterItem(_ context.Context, name string) (int64, error) {
 	m.storage.Lock()
 	defer m.storage.Unlock()
 	item, ok := m.storage.Counter[name]
@@ -58,4 +59,8 @@ func (m *MetricRepository) GetCounterItem(name string) (int64, error) {
 	}
 
 	return item, nil
+}
+
+func (m *MetricRepository) CheckConnection(_ context.Context) bool {
+	return true
 }

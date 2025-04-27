@@ -19,6 +19,7 @@ type Metric interface {
 type Public interface {
 	HandlePublic(rw http.ResponseWriter, r *http.Request)
 	HandleIndex(rw http.ResponseWriter, r *http.Request)
+	Ping(rw http.ResponseWriter, r *http.Request)
 }
 
 type ErrorHandler interface {
@@ -48,6 +49,7 @@ func (c *Controller) InitRoutes(loggerInst *logrus.Logger) *chi.Mux {
 	router.Post("/update", c.Metric.HandleNewFromBody)
 	router.Post("/value", c.Metric.HandleGetItemFromBody)
 	router.Get("/value/{type}/{name}", c.Metric.HandleItem)
+	router.Get("/ping", c.Public.Ping)
 
 	return router
 }
