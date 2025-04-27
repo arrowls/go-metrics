@@ -1,9 +1,10 @@
 package repository
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
 
+	"github.com/arrowls/go-metrics/internal/apperrors"
 	"github.com/arrowls/go-metrics/internal/memstorage"
 )
 
@@ -22,9 +23,6 @@ func (m *MetricRepository) AddGaugeValue(name string, value float64) {
 	defer m.storage.Unlock()
 
 	m.storage.Gauge[name] = value
-
-	printValue, _ := json.MarshalIndent(m.storage.Gauge, " ", " ")
-	fmt.Printf("Current gauge values: %s\n", printValue)
 }
 
 func (m *MetricRepository) AddCounterValue(name string, value int64) {
@@ -32,9 +30,6 @@ func (m *MetricRepository) AddCounterValue(name string, value int64) {
 	defer m.storage.Unlock()
 
 	m.storage.Counter[name] += value
-
-	printValue, _ := json.MarshalIndent(m.storage.Counter, " ", " ")
-	fmt.Printf("Current counter values: %s\n", printValue)
 }
 
 func (m *MetricRepository) GetAll() memstorage.MemStorage {
@@ -42,20 +37,24 @@ func (m *MetricRepository) GetAll() memstorage.MemStorage {
 }
 
 func (m *MetricRepository) GetGaugeItem(name string) (float64, error) {
+	m.storage.Lock()
+	defer m.storage.Unlock()
 	item, ok := m.storage.Gauge[name]
 
 	if !ok {
-		return 0, fmt.Errorf("gauge item not found")
+		return 0, errors.Join(apperrors.ErrNotFound, fmt.Errorf("gauge %s not found", name))
 	}
 
 	return item, nil
 }
 
 func (m *MetricRepository) GetCounterItem(name string) (int64, error) {
+	m.storage.Lock()
+	defer m.storage.Unlock()
 	item, ok := m.storage.Counter[name]
 
 	if !ok {
-		return 0, fmt.Errorf("counter item not found")
+		return 0, errors.Join(apperrors.ErrNotFound, fmt.Errorf("counter %s not found", name))
 	}
 
 	return item, nil

@@ -2,14 +2,16 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 
+	"github.com/arrowls/go-metrics/internal/apperrors"
+	"github.com/arrowls/go-metrics/internal/dto"
 	"github.com/arrowls/go-metrics/internal/repository"
 )
 
 type MetricService struct {
 	repository repository.Repository
-	// global configs, db access, etc
 }
 
 func NewMetricService(repository *repository.Repository) *MetricService {
@@ -18,29 +20,27 @@ func NewMetricService(repository *repository.Repository) *MetricService {
 	}
 }
 
-func (m *MetricService) CreateByType(metricType string, name string, stringValue string) error {
-	if metricType == "gauge" {
-		parsedValue, err := strconv.ParseFloat(stringValue, 64)
-
+func (m *MetricService) Create(dto *dto.CreateMetric) error {
+	if dto.Type == "gauge" {
+		parsedValue, err := strconv.ParseFloat(dto.Value, 64)
 		if err != nil {
-			return err
+			return errors.Join(apperrors.ErrBadRequest, err)
 		}
 
-		m.repository.Metric.AddGaugeValue(name, parsedValue)
+		m.repository.Metric.AddGaugeValue(dto.Name, parsedValue)
 		return nil
 	}
 
-	if metricType == "counter" {
-		parsedValue, err := strconv.ParseInt(stringValue, 10, 64)
+	if dto.Type == "counter" {
+		parsedValue, err := strconv.ParseInt(dto.Value, 10, 64)
 		if err != nil {
-			return err
+			return errors.Join(apperrors.ErrBadRequest, err)
 		}
 
-		m.repository.Metric.AddCounterValue(name, parsedValue)
+		m.repository.Metric.AddCounterValue(dto.Name, parsedValue)
 		return nil
 	}
-
-	return errors.New("invalid metric type")
+	return errors.Join(apperrors.ErrBadRequest, fmt.Errorf("unknown metric type: %s", dto.Type))
 }
 
 func (m *MetricService) GetList() *map[string]interface{} {
@@ -59,9 +59,9 @@ func (m *MetricService) GetList() *map[string]interface{} {
 	return &returnMap
 }
 
-func (m *MetricService) GetItem(metricType string, name string) (string, error) {
-	if metricType == "gauge" {
-		value, err := m.repository.Metric.GetGaugeItem(name)
+func (m *MetricService) GetItem(dto *dto.GetMetric) (string, error) {
+	if dto.Type == "gauge" {
+		value, err := m.repository.Metric.GetGaugeItem(dto.Name)
 
 		if err != nil {
 			return "", err
@@ -70,8 +70,8 @@ func (m *MetricService) GetItem(metricType string, name string) (string, error) 
 		return strconv.FormatFloat(value, 'f', -1, 64), nil
 	}
 
-	if metricType == "counter" {
-		value, err := m.repository.Metric.GetCounterItem(name)
+	if dto.Type == "counter" {
+		value, err := m.repository.Metric.GetCounterItem(dto.Name)
 
 		if err != nil {
 			return "", err
@@ -80,5 +80,5 @@ func (m *MetricService) GetItem(metricType string, name string) (string, error) 
 		return strconv.FormatInt(value, 10), nil
 	}
 
-	return "", errors.New("invalid metric type")
+	return "", errors.Join(apperrors.ErrBadRequest, fmt.Errorf("unknown metric type: %s", dto.Type))
 }

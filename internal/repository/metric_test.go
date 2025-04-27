@@ -52,7 +52,7 @@ func TestMetricRepository_GetGaugeItem(t *testing.T) {
 		value, err := repo.GetGaugeItem("test name")
 
 		assert.NoError(t, err)
-		assert.Equal(t, float64(1.23), value)
+		assert.Equal(t, 1.23, value)
 	})
 
 	t.Run("fail", func(t *testing.T) {

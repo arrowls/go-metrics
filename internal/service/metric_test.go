@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/arrowls/go-metrics/internal/dto"
 	"github.com/arrowls/go-metrics/internal/memstorage"
 	"github.com/arrowls/go-metrics/internal/repository"
 	"github.com/stretchr/testify/assert"
@@ -57,14 +58,22 @@ func TestMetricService_CreateByType(t *testing.T) {
 	service := NewMetricService(repo)
 
 	t.Run("it should handle invalid type", func(t *testing.T) {
-		err := service.CreateByType("non-existent type", "", "")
+		err := service.Create(&dto.CreateMetric{
+			Type:  "non-existent",
+			Name:  "",
+			Value: "",
+		})
 
 		assert.NotNil(t, err)
 	})
 
 	t.Run("it should create a metric with Gauge type", func(t *testing.T) {
 		metric.Mock.On("AddGaugeValue", "MetricName", 1.23)
-		err := service.CreateByType("gauge", "MetricName", "1.23")
+		err := service.Create(&dto.CreateMetric{
+			Type:  "gauge",
+			Name:  "MetricName",
+			Value: "1.23",
+		})
 
 		assert.Nil(t, err)
 
@@ -73,7 +82,11 @@ func TestMetricService_CreateByType(t *testing.T) {
 
 	t.Run("it should create a metric with Counter type", func(t *testing.T) {
 		metric.Mock.On("AddCounterValue", "MetricName", int64(123))
-		err := service.CreateByType("counter", "MetricName", "123")
+		err := service.Create(&dto.CreateMetric{
+			Type:  "counter",
+			Name:  "MetricName",
+			Value: "123",
+		})
 
 		assert.Nil(t, err)
 
@@ -81,11 +94,19 @@ func TestMetricService_CreateByType(t *testing.T) {
 	})
 
 	t.Run("it should handle invalid value", func(t *testing.T) {
-		err := service.CreateByType("counter", "123", "definitely not a number")
+		err := service.Create(&dto.CreateMetric{
+			Type:  "counter",
+			Name:  "123",
+			Value: "definitely not a number",
+		})
 
 		assert.NotNil(t, err)
 
-		err2 := service.CreateByType("gauge", "123", "definitely not a number")
+		err2 := service.Create(&dto.CreateMetric{
+			Type:  "gauge",
+			Name:  "123",
+			Value: "definitely not a number",
+		})
 
 		assert.NotNil(t, err2)
 	})
@@ -94,36 +115,51 @@ func TestMetricService_CreateByType(t *testing.T) {
 		metricMap := service.GetList()
 
 		assert.Equal(t, *metricMap, map[string]interface{}{
-			"key1.1": float64(1.1),
-			"key2.2": float64(2.2),
+			"key1.1": 1.1,
+			"key2.2": 2.2,
 			"key1":   int64(1),
 			"key2":   int64(2),
 		})
 	})
 
 	t.Run("it should return item", func(t *testing.T) {
-		value, err := service.GetItem("gauge", "key")
+		value, err := service.GetItem(&dto.GetMetric{
+			Type: "gauge",
+			Name: "key",
+		})
 
 		assert.Nil(t, err)
 		assert.Equal(t, "123", value)
 
-		value, err = service.GetItem("counter", "key")
+		value, err = service.GetItem(&dto.GetMetric{
+			Type: "counter",
+			Name: "key",
+		})
 
 		assert.Nil(t, err)
 		assert.Equal(t, "123", value)
 	})
 
 	t.Run("it should handle return item error", func(t *testing.T) {
-		value, err := service.GetItem("", "key")
+		value, err := service.GetItem(&dto.GetMetric{
+			Type: "",
+			Name: "key",
+		})
 
 		assert.NotNil(t, err)
 		assert.Equal(t, "", value)
 
-		value, err = service.GetItem("gauge", "")
+		value, err = service.GetItem(&dto.GetMetric{
+			Type: "gauge",
+			Name: "",
+		})
 		assert.NotNil(t, err)
 		assert.Equal(t, "", value)
 
-		value, err = service.GetItem("counter", "")
+		value, err = service.GetItem(&dto.GetMetric{
+			Type: "counter",
+			Name: "",
+		})
 		assert.NotNil(t, err)
 		assert.Equal(t, "", value)
 	})

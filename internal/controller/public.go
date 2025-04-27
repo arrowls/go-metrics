@@ -19,7 +19,9 @@ func (c *PublicController) HandlePublic(w http.ResponseWriter, r *http.Request) 
 	http.FileServer(http.Dir("./frontend/dist")).ServeHTTP(w, r)
 }
 
-func (c *PublicController) HandleIndex(w http.ResponseWriter, r *http.Request) {
+func (c *PublicController) HandleIndex(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+
 	tmpl, err := template.ParseFiles("./frontend/dist/index.html")
 	if err != nil {
 		http.Error(w, "Internal server error. Please try again later", http.StatusInternalServerError)
