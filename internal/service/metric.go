@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -20,14 +21,14 @@ func NewMetricService(repository *repository.Repository) *MetricService {
 	}
 }
 
-func (m *MetricService) Create(dto *dto.CreateMetric) error {
+func (m *MetricService) Create(ctx context.Context, dto *dto.CreateMetric) error {
 	if dto.Type == "gauge" {
 		parsedValue, err := strconv.ParseFloat(dto.Value, 64)
 		if err != nil {
 			return errors.Join(apperrors.ErrBadRequest, err)
 		}
 
-		m.repository.Metric.AddGaugeValue(dto.Name, parsedValue)
+		m.repository.Metric.AddGaugeValue(ctx, dto.Name, parsedValue)
 		return nil
 	}
 
@@ -37,14 +38,14 @@ func (m *MetricService) Create(dto *dto.CreateMetric) error {
 			return errors.Join(apperrors.ErrBadRequest, err)
 		}
 
-		m.repository.Metric.AddCounterValue(dto.Name, parsedValue)
+		m.repository.Metric.AddCounterValue(ctx, dto.Name, parsedValue)
 		return nil
 	}
 	return errors.Join(apperrors.ErrBadRequest, fmt.Errorf("unknown metric type: %s", dto.Type))
 }
 
-func (m *MetricService) GetList() *map[string]interface{} {
-	storage := m.repository.Metric.GetAll()
+func (m *MetricService) GetList(ctx context.Context) *map[string]interface{} {
+	storage := m.repository.Metric.GetAll(ctx)
 
 	returnMap := make(map[string]interface{})
 
@@ -59,10 +60,9 @@ func (m *MetricService) GetList() *map[string]interface{} {
 	return &returnMap
 }
 
-func (m *MetricService) GetItem(dto *dto.GetMetric) (string, error) {
+func (m *MetricService) GetItem(ctx context.Context, dto *dto.GetMetric) (string, error) {
 	if dto.Type == "gauge" {
-		value, err := m.repository.Metric.GetGaugeItem(dto.Name)
-
+		value, err := m.repository.Metric.GetGaugeItem(ctx, dto.Name)
 		if err != nil {
 			return "", err
 		}
@@ -71,7 +71,7 @@ func (m *MetricService) GetItem(dto *dto.GetMetric) (string, error) {
 	}
 
 	if dto.Type == "counter" {
-		value, err := m.repository.Metric.GetCounterItem(dto.Name)
+		value, err := m.repository.Metric.GetCounterItem(ctx, dto.Name)
 
 		if err != nil {
 			return "", err
@@ -80,5 +80,9 @@ func (m *MetricService) GetItem(dto *dto.GetMetric) (string, error) {
 		return strconv.FormatInt(value, 10), nil
 	}
 
-	return "", errors.Join(apperrors.ErrBadRequest, fmt.Errorf("unknown metric type: %s", dto.Type))
+	return "", errors.Join(apperrors.ErrBadRequest, fmt.Errorf("unknown metric typef: %s", dto.Type))
+}
+
+func (m *MetricService) CheckConnection(ctx context.Context) bool {
+	return m.repository.Metric.CheckConnection(ctx)
 }

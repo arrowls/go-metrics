@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -54,7 +55,7 @@ func (r *restorableRepository) runSyncAction() {
 		}
 	}()
 
-	data := r.GetAll()
+	data := r.GetAll(context.Background())
 
 	fileContent, err := json.Marshal(data)
 	if err != nil {
@@ -94,27 +95,29 @@ func (r *restorableRepository) restore() {
 		return
 	}
 
+	ctx := context.Background()
+
 	for name, value := range restoredStorage.Counter {
-		r.Metric.AddCounterValue(name, value)
+		r.Metric.AddCounterValue(ctx, name, value)
 	}
 
 	for name, value := range restoredStorage.Gauge {
-		r.Metric.AddGaugeValue(name, value)
+		r.Metric.AddGaugeValue(ctx, name, value)
 	}
 }
 
-func (r *restorableRepository) AddGaugeValue(name string, value float64) {
+func (r *restorableRepository) AddGaugeValue(ctx context.Context, name string, value float64) {
 	if r.isSync() {
 		r.runSyncAction()
 	}
 
-	r.Metric.AddGaugeValue(name, value)
+	r.Metric.AddGaugeValue(ctx, name, value)
 }
 
-func (r *restorableRepository) AddCounterValue(name string, value int64) {
+func (r *restorableRepository) AddCounterValue(ctx context.Context, name string, value int64) {
 	if r.isSync() {
 		r.runSyncAction()
 	}
 
-	r.Metric.AddCounterValue(name, value)
+	r.Metric.AddCounterValue(ctx, name, value)
 }

@@ -22,21 +22,23 @@ type MockMetricService struct {
 	mock.Mock
 }
 
-func (s *MockMetricService) Create(dto *dto.CreateMetric) error {
+func (s *MockMetricService) Create(_ context.Context, dto *dto.CreateMetric) error {
 	args := s.Called(dto.Type, dto.Name, dto.Value)
 
 	return args.Error(0)
 }
 
-func (s *MockMetricService) GetList() *map[string]interface{} {
+func (s *MockMetricService) GetList(_ context.Context) *map[string]interface{} {
 	return &map[string]interface{}{}
 }
-func (s *MockMetricService) GetItem(dto *dto.GetMetric) (string, error) {
+func (s *MockMetricService) GetItem(_ context.Context, dto *dto.GetMetric) (string, error) {
 	if dto.Type != "" && dto.Name != "" {
 		return "123", nil
 	}
 	return "", errors.New("not found")
 }
+
+func (s *MockMetricService) CheckConnection(_ context.Context) bool { return true }
 
 func createContext(r *http.Request, params map[string]string) *http.Request {
 	rctx := chi.NewRouteContext()
