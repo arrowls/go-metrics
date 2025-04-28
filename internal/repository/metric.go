@@ -19,22 +19,24 @@ func NewMetricRepository(storage *memstorage.MemStorage) Metric {
 	}
 }
 
-func (m *MetricRepository) AddGaugeValue(_ context.Context, name string, value float64) {
+func (m *MetricRepository) AddGaugeValue(_ context.Context, name string, value float64) error {
 	m.storage.Lock()
 	defer m.storage.Unlock()
 
 	m.storage.Gauge[name] = value
+	return nil
 }
 
-func (m *MetricRepository) AddCounterValue(_ context.Context, name string, value int64) {
+func (m *MetricRepository) AddCounterValue(_ context.Context, name string, value int64) error {
 	m.storage.Lock()
 	defer m.storage.Unlock()
 
 	m.storage.Counter[name] += value
+	return nil
 }
 
-func (m *MetricRepository) GetAll(ctx context.Context) memstorage.MemStorage {
-	return *m.storage
+func (m *MetricRepository) GetAll(_ context.Context) (memstorage.MemStorage, error) {
+	return *m.storage, nil
 }
 
 func (m *MetricRepository) GetGaugeItem(_ context.Context, name string) (float64, error) {

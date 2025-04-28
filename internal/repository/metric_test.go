@@ -35,7 +35,7 @@ func TestMetricRepository_GetAll(t *testing.T) {
 	repo := NewMetricRepository(storage)
 
 	ctx := context.Background()
-	value := repo.GetAll(ctx)
+	value, _ := repo.GetAll(ctx)
 	assert.Equal(t, *storage, value)
 }
 

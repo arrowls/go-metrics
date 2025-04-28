@@ -1,6 +1,8 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: ./docker/app/Dockerfile
     volumes:
       - ./:/go/src/app
     tty: true
@@ -10,6 +12,16 @@ services:
       - "${APP_PORT}:${APP_PORT}"
     depends_on:
       - db
+      - migrate
+
+  migrate:
+    build:
+      context: .
+      dockerfile: ./docker/migrations/Dockerfile
+    environment:
+      DATABASE_DSN: "${DATABASE_DSN}"
+    volumes:
+      - ./internal/database/migrations:/app/migrations
   db:
     image: postgres:13-alpine
     ports:

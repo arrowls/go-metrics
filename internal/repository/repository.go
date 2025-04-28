@@ -8,9 +8,9 @@ import (
 )
 
 type Metric interface {
-	AddGaugeValue(ctx context.Context, key string, value float64)
-	AddCounterValue(ctx context.Context, key string, value int64)
-	GetAll(ctx context.Context) memstorage.MemStorage
+	AddGaugeValue(ctx context.Context, key string, value float64) error
+	AddCounterValue(ctx context.Context, key string, value int64) error
+	GetAll(ctx context.Context) (memstorage.MemStorage, error)
 	GetCounterItem(ctx context.Context, name string) (int64, error)
 	GetGaugeItem(ctx context.Context, name string) (float64, error)
 	CheckConnection(ctx context.Context) bool
@@ -20,9 +20,14 @@ type Repository struct {
 	Metric Metric
 }
 
-func NewRepository(storage *memstorage.MemStorage, db *pgxpool.Pool) *Repository {
-	metricRepo := NewMetricRepository(storage)
+func NewRepository(storage *memstorage.MemStorage) *Repository {
 	return &Repository{
-		Metric: NewPostgresRepository(db, metricRepo),
+		Metric: NewMetricRepository(storage),
+	}
+}
+
+func NewDatabaseRepository(db *pgxpool.Pool) *Repository {
+	return &Repository{
+		Metric: NewPostgresRepository(db),
 	}
 }

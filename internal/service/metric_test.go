@@ -16,15 +16,17 @@ type MockMetric struct {
 	mock.Mock
 }
 
-func (m *MockMetric) AddGaugeValue(_ context.Context, key string, value float64) {
+func (m *MockMetric) AddGaugeValue(_ context.Context, key string, value float64) error {
 	m.Mock.Called(key, value)
+	return nil
 }
 
-func (m *MockMetric) AddCounterValue(_ context.Context, key string, value int64) {
+func (m *MockMetric) AddCounterValue(_ context.Context, key string, value int64) error {
 	m.Mock.Called(key, value)
+	return nil
 }
 
-func (m *MockMetric) GetAll(_ context.Context) memstorage.MemStorage {
+func (m *MockMetric) GetAll(_ context.Context) (memstorage.MemStorage, error) {
 	inst := *memstorage.GetInstance()
 
 	inst.Gauge = map[string]float64{
@@ -37,7 +39,7 @@ func (m *MockMetric) GetAll(_ context.Context) memstorage.MemStorage {
 		"key2": 2,
 	}
 
-	return inst
+	return inst, nil
 }
 func (m *MockMetric) GetCounterItem(_ context.Context, name string) (int64, error) {
 	if name != "" {

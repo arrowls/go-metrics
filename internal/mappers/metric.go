@@ -51,7 +51,11 @@ func HTTPWithBodyToCreateMetric(r *http.Request) (*dto.CreateMetric, error) {
 	var requestBody dto.Metrics
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
-		return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("failed to read the body of the request"))
+		return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("failed to read the body of the request: %w", err))
+	}
+
+	if requestBody.ID == "HeapSys" {
+		fmt.Printf("mapper: %f\n", *requestBody.Value)
 	}
 
 	err = requestBody.Validate()

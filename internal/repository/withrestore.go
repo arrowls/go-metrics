@@ -55,7 +55,11 @@ func (r *restorableRepository) runSyncAction() {
 		}
 	}()
 
-	data := r.GetAll(context.Background())
+	data, err := r.GetAll(context.Background())
+	if err != nil {
+		r.logger.Errorf("error while getting data: %+v", err)
+		return
+	}
 
 	fileContent, err := json.Marshal(data)
 	if err != nil {
@@ -98,26 +102,26 @@ func (r *restorableRepository) restore() {
 	ctx := context.Background()
 
 	for name, value := range restoredStorage.Counter {
-		r.Metric.AddCounterValue(ctx, name, value)
+		_ = r.Metric.AddCounterValue(ctx, name, value)
 	}
 
 	for name, value := range restoredStorage.Gauge {
-		r.Metric.AddGaugeValue(ctx, name, value)
+		_ = r.Metric.AddGaugeValue(ctx, name, value)
 	}
 }
 
-func (r *restorableRepository) AddGaugeValue(ctx context.Context, name string, value float64) {
+func (r *restorableRepository) AddGaugeValue(ctx context.Context, name string, value float64) error {
 	if r.isSync() {
 		r.runSyncAction()
 	}
 
-	r.Metric.AddGaugeValue(ctx, name, value)
+	return r.Metric.AddGaugeValue(ctx, name, value)
 }
 
-func (r *restorableRepository) AddCounterValue(ctx context.Context, name string, value int64) {
+func (r *restorableRepository) AddCounterValue(ctx context.Context, name string, value int64) error {
 	if r.isSync() {
 		r.runSyncAction()
 	}
 
-	r.Metric.AddCounterValue(ctx, name, value)
+	return r.Metric.AddCounterValue(ctx, name, value)
 }

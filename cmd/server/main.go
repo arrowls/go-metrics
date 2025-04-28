@@ -29,19 +29,27 @@ func main() {
 
 	loggerInst.Info("Starting application on " + serverConfig.ServerEndpoint)
 
-	pool, err := pgxpool.New(context.Background(), serverConfig.DatabaseDSN)
-	if err != nil {
-		loggerInst.Fatal("failed to connect to database: " + err.Error())
+	var repo *repository.Repository
+
+	if serverConfig.ServerEndpoint == "" {
+		storage := memstorage.GetInstance()
+
+		repo = repository.WithRestore(
+			repository.NewRepository(storage),
+			time.Duration(serverConfig.StoreInterval)*time.Second,
+			serverConfig.StorageFilePath,
+			serverConfig.Restore,
+			loggerInst,
+		)
+	} else {
+		pool, err := pgxpool.New(context.Background(), serverConfig.DatabaseDSN)
+		if err != nil {
+			loggerInst.Fatal("failed to connect to database: " + err.Error())
+		}
+
+		repo = repository.NewDatabaseRepository(pool)
 	}
 
-	storage := memstorage.GetInstance()
-	repo := repository.WithRestore(
-		repository.NewRepository(storage, pool),
-		time.Duration(serverConfig.StoreInterval)*time.Second,
-		serverConfig.StorageFilePath,
-		serverConfig.Restore,
-		loggerInst,
-	)
 	services := service.NewService(repo)
 	controllers := controller.NewController(services, errorHandler)
 
