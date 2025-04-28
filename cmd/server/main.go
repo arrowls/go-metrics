@@ -13,6 +13,7 @@ import (
 	"github.com/arrowls/go-metrics/internal/apperrors"
 	"github.com/arrowls/go-metrics/internal/config"
 	"github.com/arrowls/go-metrics/internal/controller"
+	"github.com/arrowls/go-metrics/internal/database"
 	"github.com/arrowls/go-metrics/internal/logger"
 	"github.com/arrowls/go-metrics/internal/memstorage"
 	"github.com/arrowls/go-metrics/internal/repository"
@@ -47,6 +48,7 @@ func main() {
 			loggerInst.Fatal("failed to connect to database: " + err.Error())
 		}
 
+		database.TryMigrations(serverConfig.DatabaseDSN, loggerInst)
 		repo = repository.NewDatabaseRepository(pool)
 	}
 
