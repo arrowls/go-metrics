@@ -31,7 +31,7 @@ func main() {
 
 	var repo *repository.Repository
 
-	if serverConfig.ServerEndpoint == "" {
+	if serverConfig.DatabaseDSN == "" {
 		storage := memstorage.GetInstance()
 
 		repo = repository.WithRestore(
