@@ -12,16 +12,28 @@ type HTTPErrorHandler struct {
 }
 
 func (h *HTTPErrorHandler) Handle(w http.ResponseWriter, err error) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var status int
+
 	switch {
-	case errors.Is(err, ErrNotFound):
-		http.Error(w, ErrorResponse(err.Error()), http.StatusNotFound)
-	case errors.Is(err, ErrBadRequest):
-		http.Error(w, ErrorResponse(err.Error()), http.StatusBadRequest)
 	case err == nil:
 		return
+	case errors.Is(err, ErrNotFound):
+		status = http.StatusNotFound
+	case errors.Is(err, ErrBadRequest):
+		status = http.StatusBadRequest
 	default:
-		http.Error(w, ErrorResponse("Unknown error"), http.StatusInternalServerError)
+		status = http.StatusInternalServerError
 		h.logger.Errorf("an unknown error occurred in the application: %s", err.Error())
+	}
+
+	w.WriteHeader(status)
+
+	_, errWrite := w.Write(ErrorResponse(err.Error()))
+	if errWrite != nil {
+		h.logger.Error(errWrite)
+		return
 	}
 }
 
