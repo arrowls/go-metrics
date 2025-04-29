@@ -7,52 +7,75 @@ import (
 	"strconv"
 
 	"github.com/arrowls/go-metrics/internal/apperrors"
-	"github.com/arrowls/go-metrics/internal/logger"
+	"github.com/arrowls/go-metrics/internal/database"
 	"github.com/arrowls/go-metrics/internal/memstorage"
+	"github.com/arrowls/go-metrics/internal/utils"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/sirupsen/logrus"
 )
 
 type PostgresRepository struct {
-	db *pgxpool.Pool
+	db     *pgxpool.Pool
+	logger *logrus.Logger
 }
 
-func NewPostgresRepository(db *pgxpool.Pool) Metric {
+func NewPostgresRepository(db *pgxpool.Pool, logger *logrus.Logger) Metric {
 	return &PostgresRepository{
 		db,
+		logger,
 	}
 }
 func (m *PostgresRepository) AddGaugeValue(ctx context.Context, name string, value float64) error {
-	loggerInst := logger.Inject(ctx)
+	err := utils.WithRetry(func() (bool, error) {
+		_, dbErr := m.db.Exec(ctx, `
+		  INSERT INTO gauges (name, value) 
+		  VALUES ($1, $2)
+		  ON CONFLICT (name) DO UPDATE
+		  SET value = $2
+		  `,
+			name, strconv.FormatFloat(value, 'f', -1, 64),
+		)
 
-	_, err := m.db.Exec(ctx, `
-	  INSERT INTO gauges (name, value) 
-	  VALUES ($1, $2)
-	  ON CONFLICT (name) DO UPDATE
-	  SET value = $2`,
-		name, strconv.FormatFloat(value, 'f', -1, 64),
-	)
+		if dbErr == nil {
+			return false, nil
+		}
+
+		if database.IsConnectionException(dbErr.Error()) {
+			return true, dbErr
+		}
+		return false, dbErr
+	})
 
 	if err != nil {
-		loggerInst.Error(err)
+		m.logger.Error(err)
 		return fmt.Errorf("error while inserting gauge value")
 	}
 	return nil
 }
 
 func (m *PostgresRepository) AddCounterValue(ctx context.Context, name string, value int64) error {
-	loggerInst := logger.Inject(ctx)
+	err := utils.WithRetry(func() (bool, error) {
+		_, dbErr := m.db.Exec(ctx, `
+		  INSERT INTO counters (name, value) 
+		  VALUES ($1, $2)
+		  ON CONFLICT (name) DO UPDATE
+		  SET value = counters.value + $2`,
+			name, value,
+		)
 
-	_, err := m.db.Exec(ctx, `
-	  INSERT INTO counters (name, value) 
-	  VALUES ($1, $2)
-	  ON CONFLICT (name) DO UPDATE
-	  SET value = counters.value + $2`,
-		name, value,
-	)
+		if dbErr == nil {
+			return false, nil
+		}
+
+		if database.IsConnectionException(dbErr.Error()) {
+			return true, dbErr
+		}
+		return false, dbErr
+	})
 
 	if err != nil {
-		loggerInst.Error(err)
+		m.logger.Error(err)
 		return fmt.Errorf("error while inserting counter value")
 	}
 	return nil
@@ -60,43 +83,68 @@ func (m *PostgresRepository) AddCounterValue(ctx context.Context, name string, v
 
 func (m *PostgresRepository) GetAll(ctx context.Context) (memstorage.MemStorage, error) {
 	storage := memstorage.GetInstance()
-	loggerInst := logger.Inject(ctx)
 
-	gaugeRows, err := m.db.Query(ctx, "SELECT name, value FROM gauges")
-	if err != nil {
-		loggerInst.Error(err)
-		return *storage, fmt.Errorf("error while fetching gauges from database")
-	}
+	err := utils.WithRetry(func() (bool, error) {
+		gaugeRows, dbErr := m.db.Query(ctx, "SELECT name, value FROM gauges")
+		if dbErr != nil {
+			m.logger.Error(dbErr)
 
-	for gaugeRows.Next() {
-		var name string
-		var value float64
-		err = gaugeRows.Scan(&name, &value)
-		if err == nil {
-			storage.Gauge[name] = value
+			if database.IsConnectionException(dbErr.Error()) {
+				return true, dbErr
+			}
+
+			return false, fmt.Errorf("error while fetching gauges from database")
 		}
-	}
 
-	counterRows, err := m.db.Query(ctx, "SELECT name, value FROM counters")
-	if err != nil {
-		loggerInst.Error(err)
-		return *storage, fmt.Errorf("error while fetching counters from database: %w", err)
-	}
-
-	for counterRows.Next() {
-		var name string
-		var value int64
-		err = gaugeRows.Scan(&name, &value)
-		if err == nil {
-			storage.Counter[name] = value
+		for gaugeRows.Next() {
+			var name string
+			var value float64
+			err := gaugeRows.Scan(&name, &value)
+			if err == nil {
+				storage.Gauge[name] = value
+			}
 		}
+
+		return false, nil
+	})
+
+	if err != nil {
+		return *storage, err
+	}
+
+	err = utils.WithRetry(func() (bool, error) {
+		counterRows, dbErr := m.db.Query(ctx, "SELECT name, value FROM counters")
+
+		if dbErr != nil {
+			m.logger.Error(dbErr)
+
+			if database.IsConnectionException(dbErr.Error()) {
+				return true, dbErr
+			}
+
+			return false, fmt.Errorf("error while fetching gauges from database")
+		}
+
+		for counterRows.Next() {
+			var name string
+			var value int64
+			err = counterRows.Scan(&name, &value)
+			if err == nil {
+				storage.Counter[name] = value
+			}
+		}
+
+		return false, nil
+	})
+
+	if err != nil {
+		return *storage, err
 	}
 
 	return *storage, nil
 }
 
 func (m *PostgresRepository) GetGaugeItem(ctx context.Context, name string) (float64, error) {
-	loggerInst := logger.Inject(ctx)
 	var value float64
 
 	row := m.db.QueryRow(ctx, "SELECT value FROM gauges WHERE name = $1", name)
@@ -107,7 +155,7 @@ func (m *PostgresRepository) GetGaugeItem(ctx context.Context, name string) (flo
 	}
 
 	if err != nil {
-		loggerInst.Error(err)
+		m.logger.Error(err)
 		return 0, fmt.Errorf("error fetching value from database")
 	}
 
@@ -115,7 +163,6 @@ func (m *PostgresRepository) GetGaugeItem(ctx context.Context, name string) (flo
 }
 
 func (m *PostgresRepository) GetCounterItem(ctx context.Context, name string) (int64, error) {
-	loggerInst := logger.Inject(ctx)
 	var value int64
 
 	row := m.db.QueryRow(ctx, "SELECT value FROM counters WHERE name = $1", name)
@@ -126,7 +173,7 @@ func (m *PostgresRepository) GetCounterItem(ctx context.Context, name string) (i
 	}
 
 	if err != nil {
-		loggerInst.Error(err)
+		m.logger.Error(err)
 		return 0, fmt.Errorf("error fetching value from database")
 	}
 
@@ -135,7 +182,6 @@ func (m *PostgresRepository) GetCounterItem(ctx context.Context, name string) (i
 
 func (m *PostgresRepository) CheckConnection(ctx context.Context) bool {
 	if err := m.db.Ping(ctx); err != nil {
-		fmt.Println(err)
 		return false
 	}
 	return true

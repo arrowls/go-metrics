@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/arrowls/go-metrics/internal/memstorage"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Metric interface {
@@ -23,11 +22,5 @@ type Repository struct {
 func NewRepository(storage *memstorage.MemStorage) *Repository {
 	return &Repository{
 		Metric: NewMetricRepository(storage),
-	}
-}
-
-func NewDatabaseRepository(db *pgxpool.Pool) *Repository {
-	return &Repository{
-		Metric: NewPostgresRepository(db),
 	}
 }

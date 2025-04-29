@@ -1,9 +1,7 @@
 package database
 
 import (
-	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -18,17 +16,11 @@ func TryMigrations(dbURL string, loggerInst *logrus.Logger) {
 		return
 	}
 
-	if _, err := os.Stat(migrationsPath); os.IsNotExist(err) {
-		return
-	}
-
-	m, err := migrate.New(
-		fmt.Sprintf("file://%s", migrationsPath),
-		dbURL,
-	)
+	m, err := migrate.New(fmt.Sprintf("file://%s", migrationsPath), dbURL)
 	if err != nil {
 		return
 	}
+
 	defer func() {
 		if errClose, errDatabase := m.Close(); errClose != nil || errDatabase != nil {
 			loggerInst.Errorf("error migrating: %v, %v", errClose, errDatabase)
@@ -36,7 +28,7 @@ func TryMigrations(dbURL string, loggerInst *logrus.Logger) {
 	}()
 
 	err = m.Up()
-	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return
+	if err != nil {
+		loggerInst.Errorf("error migrating: %v", err)
 	}
 }

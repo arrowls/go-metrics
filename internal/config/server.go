@@ -28,7 +28,7 @@ type ServerConfig struct {
 var serverConfig ServerConfig
 var agentConfig AgentConfig
 
-func NewServerConfig() ServerConfig {
+func newServerConfig() ServerConfig {
 	flag.StringVar(&serverConfig.ServerEndpoint, "a", serverEndpointDefault, "server endpoint url")
 	flag.IntVar(&serverConfig.StoreInterval, "i", storeIntervalDefault, "interval to write metrics to file")
 	flag.StringVar(&serverConfig.StorageFilePath, "f", storageFilePathDefault, "file to write metrics backup")

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/arrowls/go-metrics/internal/dto"
-	"github.com/arrowls/go-metrics/internal/repository"
 )
 
 type Metric interface {
@@ -16,10 +15,4 @@ type Metric interface {
 
 type Service struct {
 	Metric Metric
-}
-
-func NewService(repo *repository.Repository) *Service {
-	return &Service{
-		Metric: NewMetricService(repo),
-	}
 }

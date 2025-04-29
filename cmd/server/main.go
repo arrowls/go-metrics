@@ -10,52 +10,21 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/arrowls/go-metrics/internal/apperrors"
 	"github.com/arrowls/go-metrics/internal/config"
 	"github.com/arrowls/go-metrics/internal/controller"
-	"github.com/arrowls/go-metrics/internal/database"
+	"github.com/arrowls/go-metrics/internal/di"
 	"github.com/arrowls/go-metrics/internal/logger"
-	"github.com/arrowls/go-metrics/internal/memstorage"
-	"github.com/arrowls/go-metrics/internal/repository"
-	"github.com/arrowls/go-metrics/internal/service"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
-	loggerInst := logger.NewLogger()
+	container := di.NewContainer()
 
-	errorHandler := apperrors.NewHTTPErrorHandler(loggerInst)
-
-	serverConfig := config.NewServerConfig()
+	loggerInst := logger.ProvideLogger(container)
+	serverConfig := config.ProvideServerConfig(container)
 
 	loggerInst.Info("Starting application on " + serverConfig.ServerEndpoint)
 
-	var repo *repository.Repository
-
-	if serverConfig.DatabaseDSN == "" {
-		storage := memstorage.GetInstance()
-
-		repo = repository.WithRestore(
-			repository.NewRepository(storage),
-			time.Duration(serverConfig.StoreInterval)*time.Second,
-			serverConfig.StorageFilePath,
-			serverConfig.Restore,
-			loggerInst,
-		)
-	} else {
-		pool, err := pgxpool.New(context.Background(), serverConfig.DatabaseDSN)
-		if err != nil {
-			loggerInst.Fatal("failed to connect to database: " + err.Error())
-		}
-
-		database.TryMigrations(serverConfig.DatabaseDSN, loggerInst)
-		repo = repository.NewDatabaseRepository(pool)
-	}
-
-	services := service.NewService(repo)
-	controllers := controller.NewController(services, errorHandler)
-
-	router := controllers.InitRoutes(loggerInst)
+	router := controller.ProvideRouter(container)
 
 	serverChan := make(chan error, 1)
 
@@ -85,6 +54,7 @@ func main() {
 		loggerInst.Info("Shutting down gracefully...")
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
+
 		if err := srv.Shutdown(ctx); err != nil {
 			loggerInst.Error(fmt.Sprintf("Server shutdown error: %v", err))
 		}
