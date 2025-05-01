@@ -170,7 +170,7 @@ func HTTPToCreateMetrics(r *http.Request) ([]dto.CreateMetric, error) {
 			if metric.Value == nil {
 				return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("value is missing for [%s]", metric.ID))
 			}
-			createMetric.Value = fmt.Sprintf("%f", *metric.Value)
+			createMetric.Value = strconv.FormatFloat(*metric.Value, 'f', -1, 64)
 		default:
 			return nil, fmt.Errorf("unknow metric value type [%s]", metric.MType)
 		}
