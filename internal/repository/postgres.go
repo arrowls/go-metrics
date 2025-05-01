@@ -8,6 +8,7 @@ import (
 
 	"github.com/arrowls/go-metrics/internal/apperrors"
 	"github.com/arrowls/go-metrics/internal/database"
+	"github.com/arrowls/go-metrics/internal/dto"
 	"github.com/arrowls/go-metrics/internal/memstorage"
 	"github.com/arrowls/go-metrics/internal/utils"
 	"github.com/jackc/pgx/v5"
@@ -185,4 +186,54 @@ func (m *PostgresRepository) CheckConnection(ctx context.Context) bool {
 		return false
 	}
 	return true
+}
+
+func (m *PostgresRepository) CreateBatch(ctx context.Context, batch []dto.CreateMetric) error {
+	tx, err := m.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("error starting tx")
+	}
+
+	defer func() {
+		errRollback := tx.Rollback(ctx)
+		if errRollback != nil {
+			m.logger.Error(errRollback)
+		}
+	}()
+
+	for _, metric := range batch {
+		if metric.Type == "gauge" {
+			_, err = tx.Exec(ctx, `
+			  INSERT INTO gauges (name, value) 
+			  VALUES ($1, $2)
+			  ON CONFLICT (name) DO UPDATE
+			  SET value = $2
+			`, metric.Name, metric.Value)
+
+			if err != nil {
+				return fmt.Errorf("error creating a batch on %s", metric.Name)
+			}
+		}
+
+		if metric.Type == "counter" {
+			_, err = m.db.Exec(ctx, `
+				  INSERT INTO counters (name, value) 
+				  VALUES ($1, $2)
+				  ON CONFLICT (name) DO UPDATE
+				  SET value = counters.value + $2`,
+				metric.Name, metric.Value,
+			)
+
+			if err != nil {
+				return fmt.Errorf("error creating a batch on %s", metric.Name)
+			}
+		}
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("error creating a batch")
+	}
+
+	return nil
 }

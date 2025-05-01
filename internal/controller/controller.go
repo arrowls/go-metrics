@@ -9,6 +9,7 @@ type Metric interface {
 	HandleItem(rw http.ResponseWriter, r *http.Request)
 	HandleNewFromBody(rw http.ResponseWriter, r *http.Request)
 	HandleGetItemFromBody(rw http.ResponseWriter, r *http.Request)
+	HandleCreateBatch(rw http.ResponseWriter, r *http.Request)
 }
 
 type Public interface {

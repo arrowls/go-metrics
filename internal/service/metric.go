@@ -90,3 +90,7 @@ func (m *MetricService) GetItem(ctx context.Context, dto *dto.GetMetric) (string
 func (m *MetricService) CheckConnection(ctx context.Context) bool {
 	return m.repository.Metric.CheckConnection(ctx)
 }
+
+func (m *MetricService) CreateBatch(ctx context.Context, batch []dto.CreateMetric) error {
+	return m.repository.Metric.CreateBatch(ctx, batch)
+}

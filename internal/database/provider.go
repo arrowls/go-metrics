@@ -2,12 +2,12 @@ package database
 
 import (
 	"context"
+	"log"
 
 	"github.com/arrowls/go-metrics/internal/config"
 	"github.com/arrowls/go-metrics/internal/di"
 	"github.com/arrowls/go-metrics/internal/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
-	log "github.com/sirupsen/logrus"
 )
 
 const diKey = "database_pool"

@@ -11,6 +11,7 @@ type Metric interface {
 	GetList(ctx context.Context) *map[string]interface{}
 	GetItem(ctx context.Context, dto *dto.GetMetric) (string, error)
 	CheckConnection(ctx context.Context) bool
+	CreateBatch(ctx context.Context, batch []dto.CreateMetric) error
 }
 
 type Service struct {

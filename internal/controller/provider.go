@@ -51,6 +51,7 @@ func ProvideRouter(container di.ContainerInterface) *chi.Mux {
 	router.Get("/", c.Public.HandleIndex)
 	router.Post("/update/{type}/{name}/{value}", c.Metric.HandleNew)
 	router.Post("/update", c.Metric.HandleNewFromBody)
+	router.Post("/updates", c.Metric.HandleCreateBatch)
 	router.Post("/value", c.Metric.HandleGetItemFromBody)
 	router.Get("/value/{type}/{name}", c.Metric.HandleItem)
 	router.Get("/ping", c.Public.Ping)

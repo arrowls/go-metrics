@@ -54,10 +54,6 @@ func HTTPWithBodyToCreateMetric(r *http.Request) (*dto.CreateMetric, error) {
 		return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("failed to read the body of the request: %w", err))
 	}
 
-	if requestBody.ID == "HeapSys" {
-		fmt.Printf("mapper: %f\n", *requestBody.Value)
-	}
-
 	err = requestBody.Validate()
 	if err != nil {
 		return nil, err
@@ -142,4 +138,45 @@ func MetricToDTO(name string, value interface{}) (*dto.Metrics, error) {
 	}
 
 	return metric, nil
+}
+
+func HTTPToCreateMetrics(r *http.Request) ([]dto.CreateMetric, error) {
+	var metrics []dto.Metrics
+
+	err := json.NewDecoder(r.Body).Decode(&metrics)
+	if err != nil {
+		return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("invalid request body"))
+	}
+
+	createMetrics := make([]dto.CreateMetric, 0, len(metrics))
+
+	for _, metric := range metrics {
+		if err = metric.Validate(); err != nil {
+			return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("validate failed on %s", metric.ID))
+		}
+
+		createMetric := dto.CreateMetric{
+			Type: metric.MType,
+			Name: metric.ID,
+		}
+
+		switch metric.MType {
+		case "counter":
+			if metric.Delta == nil {
+				return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("value is missing for [%s]", metric.ID))
+			}
+			createMetric.Value = fmt.Sprintf("%d", *metric.Delta)
+		case "gauge":
+			if metric.Value == nil {
+				return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("value is missing for [%s]", metric.ID))
+			}
+			createMetric.Value = fmt.Sprintf("%f", *metric.Value)
+		default:
+			return nil, fmt.Errorf("unknow metric value type [%s]", metric.MType)
+		}
+
+		createMetrics = append(createMetrics, createMetric)
+	}
+
+	return createMetrics, nil
 }

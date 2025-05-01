@@ -121,3 +121,18 @@ func (c *MetricController) HandleGetItemFromBody(rw http.ResponseWriter, r *http
 		c.errorHandler.Handle(rw, apperrors.ErrUnknown)
 	}
 }
+
+func (c *MetricController) HandleCreateBatch(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Add("Content-Type", "application/json")
+
+	createBatch, err := mappers.HTTPToCreateMetrics(r)
+	if err != nil {
+		c.errorHandler.Handle(rw, fmt.Errorf("error reading request: %w", err))
+		return
+	}
+
+	err = c.service.Metric.CreateBatch(r.Context(), createBatch)
+	if err != nil {
+		c.errorHandler.Handle(rw, fmt.Errorf("error creating batch: %w", err))
+	}
+}
