@@ -10,34 +10,21 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/arrowls/go-metrics/internal/apperrors"
 	"github.com/arrowls/go-metrics/internal/config"
 	"github.com/arrowls/go-metrics/internal/controller"
+	"github.com/arrowls/go-metrics/internal/di"
 	"github.com/arrowls/go-metrics/internal/logger"
-	"github.com/arrowls/go-metrics/internal/memstorage"
-	"github.com/arrowls/go-metrics/internal/repository"
-	"github.com/arrowls/go-metrics/internal/service"
 )
 
 func main() {
-	loggerInst := logger.NewLogger()
-	loggerInst.Info("Starting application")
+	container := di.NewContainer()
 
-	errorHandler := apperrors.NewHTTPErrorHandler(loggerInst)
+	loggerInst := logger.ProvideLogger(container)
+	serverConfig := config.ProvideServerConfig(container)
 
-	serverConfig := config.NewServerConfig()
-	storage := memstorage.GetInstance()
-	repo := repository.WithRestore(
-		repository.NewRepository(storage),
-		time.Duration(serverConfig.StoreInterval)*time.Second,
-		serverConfig.StorageFilePath,
-		serverConfig.Restore,
-		loggerInst,
-	)
-	services := service.NewService(repo)
-	controllers := controller.NewController(services, errorHandler)
+	loggerInst.Info("Starting application on " + serverConfig.ServerEndpoint)
 
-	router := controllers.InitRoutes(loggerInst)
+	router := controller.ProvideRouter(container)
 
 	serverChan := make(chan error, 1)
 
@@ -67,6 +54,7 @@ func main() {
 		loggerInst.Info("Shutting down gracefully...")
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
+
 		if err := srv.Shutdown(ctx); err != nil {
 			loggerInst.Error(fmt.Sprintf("Server shutdown error: %v", err))
 		}

@@ -16,7 +16,7 @@ type ErrorResponseWithMessage struct {
 	Message string `json:"message"`
 }
 
-func ErrorResponse(message string) string {
+func ErrorResponse(message string) []byte {
 	message = strings.Replace(message, "\n", "", -1)
 	message = strings.Trim(message, " \n")
 
@@ -27,5 +27,5 @@ func ErrorResponse(message string) string {
 		message,
 	}
 	responseBytes, _ := json.Marshal(response)
-	return string(responseBytes)
+	return responseBytes
 }

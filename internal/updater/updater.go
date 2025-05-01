@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 
 	"github.com/arrowls/go-metrics/internal/collector"
 	"github.com/arrowls/go-metrics/internal/dto"
@@ -17,7 +16,6 @@ import (
 type Updater struct {
 	provider  collector.MetricProvider
 	serverURL string
-	wg        *sync.WaitGroup
 }
 
 func New(provider collector.MetricProvider, serverURL string) MetricConsumer {
@@ -27,12 +25,12 @@ func New(provider collector.MetricProvider, serverURL string) MetricConsumer {
 	return &Updater{
 		provider,
 		serverURL,
-		&sync.WaitGroup{},
 	}
 }
 
 func (u *Updater) Update() {
 	data := u.provider.AsMap()
+	var metrics []*dto.Metrics
 
 	for metricType, metricValue := range *data {
 		updateDto, err := mappers.MetricToDTO(metricType, metricValue)
@@ -40,15 +38,13 @@ func (u *Updater) Update() {
 			continue
 		}
 
-		u.wg.Add(1)
-		go u.updateFromDto(updateDto)
+		metrics = append(metrics, updateDto)
 	}
 
-	u.wg.Wait()
+	u.updateFromDto(metrics)
 }
 
-func (u *Updater) updateFromDto(updateDto *dto.Metrics) {
-	defer u.wg.Done()
+func (u *Updater) updateFromDto(updateDto []*dto.Metrics) {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	if err := json.NewEncoder(gz).Encode(updateDto); err != nil {
@@ -60,7 +56,7 @@ func (u *Updater) updateFromDto(updateDto *dto.Metrics) {
 		fmt.Printf("Error closing gzip writer: %+v", errClose)
 		return
 	}
-	req, err := http.NewRequest("POST", u.serverURL+"/update", &buf)
+	req, err := http.NewRequest("POST", u.serverURL+"/updates", &buf)
 	if err != nil {
 		fmt.Printf("Error creating request: %v\n", err)
 		return

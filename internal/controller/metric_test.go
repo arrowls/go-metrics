@@ -22,21 +22,24 @@ type MockMetricService struct {
 	mock.Mock
 }
 
-func (s *MockMetricService) Create(dto *dto.CreateMetric) error {
+func (s *MockMetricService) Create(_ context.Context, dto *dto.CreateMetric) error {
 	args := s.Called(dto.Type, dto.Name, dto.Value)
 
 	return args.Error(0)
 }
 
-func (s *MockMetricService) GetList() *map[string]interface{} {
+func (s *MockMetricService) GetList(_ context.Context) *map[string]interface{} {
 	return &map[string]interface{}{}
 }
-func (s *MockMetricService) GetItem(dto *dto.GetMetric) (string, error) {
+func (s *MockMetricService) GetItem(_ context.Context, dto *dto.GetMetric) (string, error) {
 	if dto.Type != "" && dto.Name != "" {
 		return "123", nil
 	}
 	return "", errors.New("not found")
 }
+
+func (s *MockMetricService) CheckConnection(_ context.Context) bool                    { return true }
+func (s *MockMetricService) CreateBatch(_ context.Context, _ []dto.CreateMetric) error { return nil }
 
 func createContext(r *http.Request, params map[string]string) *http.Request {
 	rctx := chi.NewRouteContext()
@@ -78,7 +81,7 @@ func TestMetricController_HandleNew(t *testing.T) {
 			url:          "/update/gauge/TestMetric/",
 			params:       map[string]string{"type": "gauge", "name": "TestMetric", "value": ""},
 			expectedCode: http.StatusBadRequest,
-			expectedBody: `{"message":"Failed to read request: metric value not specified"}` + "\n",
+			expectedBody: `{"message":"Failed to read request: metric value not specified"}`,
 		},
 		{
 			name:         "empty name",
@@ -86,7 +89,7 @@ func TestMetricController_HandleNew(t *testing.T) {
 			url:          "/update/gauge//1.23",
 			params:       map[string]string{"type": "gauge", "name": "", "value": "1.23"},
 			expectedCode: http.StatusNotFound,
-			expectedBody: `{"message":"Failed to read request: metric name not specified"}` + "\n",
+			expectedBody: `{"message":"Failed to read request: metric name not specified"}`,
 		},
 	}
 
@@ -155,7 +158,7 @@ func TestMetricController_HandleItem(t *testing.T) {
 				"name": "TestMetric",
 			},
 			expectedCode: http.StatusNotFound,
-			expectedBody: `{"message":"Failed to read request: unknown metric type:"}` + "\n",
+			expectedBody: `{"message":"Failed to read request: unknown metric type:"}`,
 		},
 		{
 			name:   "HandleItem/invalid name",
@@ -166,7 +169,7 @@ func TestMetricController_HandleItem(t *testing.T) {
 				"name": "",
 			},
 			expectedCode: http.StatusNotFound,
-			expectedBody: `{"message":"Failed to read request: metric name is not specified"}` + "\n",
+			expectedBody: `{"message":"Failed to read request: metric name is not specified"}`,
 		},
 	}
 
@@ -279,7 +282,7 @@ func TestMetricController_HandleGetItemFromBody(t *testing.T) {
 		{
 			name:         "error in mapper",
 			expectedCode: http.StatusBadRequest,
-			expectedBody: `{"message":"Error reading request: could not read the request body"}` + "\n",
+			expectedBody: `{"message":"Error reading request: could not read the request body"}`,
 			body: []byte(`{
 				"type":"invalid_type",
 				"id":"TestMetric",
@@ -288,7 +291,7 @@ func TestMetricController_HandleGetItemFromBody(t *testing.T) {
 		{
 			name:         "error in service",
 			expectedCode: http.StatusBadRequest,
-			expectedBody: `{"message":"Error reading request: could not read the request body"}` + "\n",
+			expectedBody: `{"message":"Error reading request: could not read the request body"}`,
 		},
 	}
 
