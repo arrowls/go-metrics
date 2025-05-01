@@ -58,6 +58,10 @@ func (m *MockMetric) CheckConnection(_ context.Context) bool {
 	return true
 }
 
+func (m *MockMetric) CreateBatch(_ context.Context, _ []dto.CreateMetric) error {
+	return nil
+}
+
 func TestMetricService_CreateByType(t *testing.T) {
 	ctx := context.Background()
 

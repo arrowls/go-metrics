@@ -38,7 +38,8 @@ func (s *MockMetricService) GetItem(_ context.Context, dto *dto.GetMetric) (stri
 	return "", errors.New("not found")
 }
 
-func (s *MockMetricService) CheckConnection(_ context.Context) bool { return true }
+func (s *MockMetricService) CheckConnection(_ context.Context) bool                    { return true }
+func (s *MockMetricService) CreateBatch(_ context.Context, _ []dto.CreateMetric) error { return nil }
 
 func createContext(r *http.Request, params map[string]string) *http.Request {
 	rctx := chi.NewRouteContext()
