@@ -1,15 +1,20 @@
 package repository
 
 import (
+	"context"
+
+	"github.com/arrowls/go-metrics/internal/dto"
 	"github.com/arrowls/go-metrics/internal/memstorage"
 )
 
 type Metric interface {
-	AddGaugeValue(key string, value float64)
-	AddCounterValue(key string, value int64)
-	GetAll() memstorage.MemStorage
-	GetCounterItem(name string) (int64, error)
-	GetGaugeItem(name string) (float64, error)
+	AddGaugeValue(ctx context.Context, key string, value float64) error
+	AddCounterValue(ctx context.Context, key string, value int64) error
+	GetAll(ctx context.Context) (memstorage.MemStorage, error)
+	GetCounterItem(ctx context.Context, name string) (int64, error)
+	GetGaugeItem(ctx context.Context, name string) (float64, error)
+	CheckConnection(ctx context.Context) bool
+	CreateBatch(ctx context.Context, batch []dto.CreateMetric) error
 }
 
 type Repository struct {

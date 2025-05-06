@@ -4,20 +4,22 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
 	"strings"
-	"sync"
 
 	"github.com/arrowls/go-metrics/internal/collector"
 	"github.com/arrowls/go-metrics/internal/dto"
 	"github.com/arrowls/go-metrics/internal/mappers"
+	"github.com/arrowls/go-metrics/internal/utils"
 )
 
 type Updater struct {
 	provider  collector.MetricProvider
 	serverURL string
-	wg        *sync.WaitGroup
 }
 
 func New(provider collector.MetricProvider, serverURL string) MetricConsumer {
@@ -27,12 +29,12 @@ func New(provider collector.MetricProvider, serverURL string) MetricConsumer {
 	return &Updater{
 		provider,
 		serverURL,
-		&sync.WaitGroup{},
 	}
 }
 
 func (u *Updater) Update() {
 	data := u.provider.AsMap()
+	var metrics []*dto.Metrics
 
 	for metricType, metricValue := range *data {
 		updateDto, err := mappers.MetricToDTO(metricType, metricValue)
@@ -40,30 +42,48 @@ func (u *Updater) Update() {
 			continue
 		}
 
-		u.wg.Add(1)
-		go u.updateFromDto(updateDto)
+		metrics = append(metrics, updateDto)
 	}
 
-	u.wg.Wait()
+	_ = utils.WithRetry(func() (bool, error) {
+		err := u.updateFromDto(metrics)
+		if err == nil {
+			return false, nil
+		}
+
+		var netErr net.Error
+		if errors.As(err, &netErr) && netErr.Timeout() {
+			return true, netErr
+		}
+
+		if strings.Contains(err.Error(), "connection refused") {
+			return true, err
+		}
+
+		if errors.Is(err, io.EOF) {
+			return true, err
+		}
+
+		return false, nil
+	})
 }
 
-func (u *Updater) updateFromDto(updateDto *dto.Metrics) {
-	defer u.wg.Done()
+func (u *Updater) updateFromDto(updateDto []*dto.Metrics) error {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	if err := json.NewEncoder(gz).Encode(updateDto); err != nil {
 		fmt.Printf("Error marshaling postDto to JSON: %v\n", err)
-		return
+		return err
 	}
 
 	if errClose := gz.Close(); errClose != nil {
 		fmt.Printf("Error closing gzip writer: %+v", errClose)
-		return
+		return errClose
 	}
-	req, err := http.NewRequest("POST", u.serverURL+"/update", &buf)
+	req, err := http.NewRequest("POST", u.serverURL+"/updates", &buf)
 	if err != nil {
 		fmt.Printf("Error creating request: %v\n", err)
-		return
+		return err
 	}
 	req.Header.Set("Content-Encoding", "gzip")
 
@@ -71,7 +91,7 @@ func (u *Updater) updateFromDto(updateDto *dto.Metrics) {
 
 	if err != nil {
 		fmt.Printf("Error posting metric: %v\n", err)
-		return
+		return err
 	}
 
 	defer func() {
@@ -79,4 +99,6 @@ func (u *Updater) updateFromDto(updateDto *dto.Metrics) {
 			fmt.Printf("Error closing Body: %+v", errClose)
 		}
 	}()
+
+	return nil
 }
