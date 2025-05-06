@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -51,8 +52,16 @@ func (u *Updater) Update() {
 		}
 
 		var netErr net.Error
-		if errors.As(err, &netErr) && netErr.Temporary() {
+		if errors.As(err, &netErr) && netErr.Timeout() {
 			return true, netErr
+		}
+
+		if strings.Contains(err.Error(), "connection refused") {
+			return true, err
+		}
+
+		if errors.Is(err, io.EOF) {
+			return true, err
 		}
 
 		return false, nil
