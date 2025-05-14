@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/arrowls/go-metrics/internal/apperrors"
+	"github.com/arrowls/go-metrics/internal/config"
 	"github.com/arrowls/go-metrics/internal/dto"
 	"github.com/go-chi/chi/v5"
 )
@@ -37,7 +38,7 @@ func HTTPToGetMetric(r *http.Request) (*dto.GetMetric, error) {
 	if name == "" {
 		return nil, errors.Join(apperrors.ErrNotFound, fmt.Errorf("metric name is not specified"))
 	}
-	if metricType != "gauge" && metricType != "counter" {
+	if metricType != config.GaugeType && metricType != config.CounterType {
 		return nil, errors.Join(apperrors.ErrNotFound, fmt.Errorf("unknown metric type: %s", metricType))
 	}
 
@@ -60,13 +61,13 @@ func HTTPWithBodyToCreateMetric(r *http.Request) (*dto.CreateMetric, error) {
 	}
 
 	switch requestBody.MType {
-	case "gauge":
+	case config.GaugeType:
 		if requestBody.Value == nil {
 			return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("no value for gauge specified"))
 		}
 
 		return &dto.CreateMetric{Type: requestBody.MType, Value: strconv.FormatFloat(*requestBody.Value, 'f', -1, 64), Name: requestBody.ID}, nil
-	case "counter":
+	case config.CounterType:
 		if requestBody.Delta == nil {
 			return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("no value for counter specified"))
 		}
@@ -79,14 +80,14 @@ func HTTPWithBodyToCreateMetric(r *http.Request) (*dto.CreateMetric, error) {
 func CreateDTOToHTTPRes(createDto *dto.CreateMetric, value string) ([]byte, error) {
 	var metric *dto.Metrics
 	switch createDto.Type {
-	case "gauge":
+	case config.GaugeType:
 		val, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			return nil, fmt.Errorf("error while reading the value %s", createDto.Name)
 		}
 
 		metric = &dto.Metrics{ID: createDto.Name, MType: createDto.Type, Value: &val}
-	case "counter":
+	case config.CounterType:
 		deltaVal, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("error while reading the value of counter %s", createDto.Name)
@@ -129,10 +130,10 @@ func MetricToDTO(name string, value interface{}) (*dto.Metrics, error) {
 	switch v := value.(type) {
 	case float64:
 		metric.Value = &v
-		metric.MType = "gauge"
+		metric.MType = config.GaugeType
 	case int64:
 		metric.Delta = &v
-		metric.MType = "counter"
+		metric.MType = config.CounterType
 	default:
 		return nil, fmt.Errorf("unknow metric value: %d of type %T", value, value)
 	}
@@ -161,12 +162,12 @@ func HTTPToCreateMetrics(r *http.Request) ([]dto.CreateMetric, error) {
 		}
 
 		switch metric.MType {
-		case "counter":
+		case config.CounterType:
 			if metric.Delta == nil {
 				return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("value is missing for [%s]", metric.ID))
 			}
 			createMetric.Value = fmt.Sprintf("%d", *metric.Delta)
-		case "gauge":
+		case config.GaugeType:
 			if metric.Value == nil {
 				return nil, errors.Join(apperrors.ErrBadRequest, fmt.Errorf("value is missing for [%s]", metric.ID))
 			}

@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/arrowls/go-metrics/internal/apperrors"
+	"github.com/arrowls/go-metrics/internal/config"
 	"github.com/arrowls/go-metrics/internal/dto"
 	"github.com/arrowls/go-metrics/internal/repository"
 )
@@ -22,7 +23,7 @@ func NewMetricService(repository *repository.Repository) *MetricService {
 }
 
 func (m *MetricService) Create(ctx context.Context, dto *dto.CreateMetric) error {
-	if dto.Type == "gauge" {
+	if dto.Type == config.GaugeType {
 		parsedValue, err := strconv.ParseFloat(dto.Value, 64)
 		if err != nil {
 			return errors.Join(apperrors.ErrBadRequest, err)
@@ -32,7 +33,7 @@ func (m *MetricService) Create(ctx context.Context, dto *dto.CreateMetric) error
 		return err
 	}
 
-	if dto.Type == "counter" {
+	if dto.Type == config.CounterType {
 		parsedValue, err := strconv.ParseInt(dto.Value, 10, 64)
 		if err != nil {
 			return errors.Join(apperrors.ErrBadRequest, err)
@@ -65,7 +66,7 @@ func (m *MetricService) GetList(ctx context.Context) *map[string]interface{} {
 }
 
 func (m *MetricService) GetItem(ctx context.Context, dto *dto.GetMetric) (string, error) {
-	if dto.Type == "gauge" {
+	if dto.Type == config.GaugeType {
 		value, err := m.repository.Metric.GetGaugeItem(ctx, dto.Name)
 		if err != nil {
 			return "", err
@@ -74,7 +75,7 @@ func (m *MetricService) GetItem(ctx context.Context, dto *dto.GetMetric) (string
 		return strconv.FormatFloat(value, 'f', -1, 64), nil
 	}
 
-	if dto.Type == "counter" {
+	if dto.Type == config.CounterType {
 		value, err := m.repository.Metric.GetCounterItem(ctx, dto.Name)
 
 		if err != nil {

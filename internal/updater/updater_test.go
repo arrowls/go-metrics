@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/arrowls/go-metrics/internal/dto"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -71,7 +72,9 @@ func TestUpdater_Update(t *testing.T) {
 	defer server.Close()
 
 	mockProvider := MockProvider{}
-	updater := New(mockProvider, server.URL)
+	logger := logrus.New()
+	logger.SetOutput(io.Discard)
+	updater := New(mockProvider, server.URL, logger)
 
 	updater.Update()
 }

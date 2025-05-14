@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -15,20 +14,23 @@ import (
 	"github.com/arrowls/go-metrics/internal/dto"
 	"github.com/arrowls/go-metrics/internal/mappers"
 	"github.com/arrowls/go-metrics/internal/utils"
+	"github.com/sirupsen/logrus"
 )
 
 type Updater struct {
 	provider  collector.MetricProvider
 	serverURL string
+	logger    *logrus.Logger
 }
 
-func New(provider collector.MetricProvider, serverURL string) MetricConsumer {
+func New(provider collector.MetricProvider, serverURL string, logger *logrus.Logger) MetricConsumer {
 	if !strings.HasPrefix(serverURL, "http://") {
 		serverURL = "http://" + serverURL
 	}
 	return &Updater{
 		provider,
 		serverURL,
+		logger,
 	}
 }
 
@@ -72,17 +74,17 @@ func (u *Updater) updateFromDto(updateDto []*dto.Metrics) error {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	if err := json.NewEncoder(gz).Encode(updateDto); err != nil {
-		fmt.Printf("Error marshaling postDto to JSON: %v\n", err)
+		u.logger.Errorf("Error marshaling postDto to JSON: %v\n", err)
 		return err
 	}
 
 	if errClose := gz.Close(); errClose != nil {
-		fmt.Printf("Error closing gzip writer: %+v", errClose)
+		u.logger.Errorf("Error closing gzip writer: %+v", errClose)
 		return errClose
 	}
 	req, err := http.NewRequest("POST", u.serverURL+"/updates", &buf)
 	if err != nil {
-		fmt.Printf("Error creating request: %v\n", err)
+		u.logger.Errorf("Error creating request: %v\n", err)
 		return err
 	}
 	req.Header.Set("Content-Encoding", "gzip")
@@ -90,13 +92,13 @@ func (u *Updater) updateFromDto(updateDto []*dto.Metrics) error {
 	res, err := http.DefaultClient.Do(req)
 
 	if err != nil {
-		fmt.Printf("Error posting metric: %v\n", err)
+		u.logger.Errorf("Error posting metric: %v\n", err)
 		return err
 	}
 
 	defer func() {
 		if errClose := res.Body.Close(); errClose != nil {
-			fmt.Printf("Error closing Body: %+v", errClose)
+			u.logger.Errorf("Error closing Body: %+v", errClose)
 		}
 	}()
 

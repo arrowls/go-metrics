@@ -6,12 +6,18 @@ import (
 	"github.com/arrowls/go-metrics/internal/collector"
 	"github.com/arrowls/go-metrics/internal/config"
 	"github.com/arrowls/go-metrics/internal/updater"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
 	agentConfig := config.NewAgentConfig()
 	metricProvider := collector.New()
-	metricUpdater := updater.New(metricProvider, agentConfig.ServerEndpoint)
+
+	logger := logrus.New()
+	logger.SetFormatter(&logrus.JSONFormatter{})
+	logger.SetLevel(logrus.InfoLevel)
+
+	metricUpdater := updater.New(metricProvider, agentConfig.ServerEndpoint, logger)
 
 	stopChan := make(chan struct{})
 

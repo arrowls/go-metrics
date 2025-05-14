@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/arrowls/go-metrics/internal/apperrors"
+	"github.com/arrowls/go-metrics/internal/config"
 	"github.com/arrowls/go-metrics/internal/database"
 	"github.com/arrowls/go-metrics/internal/dto"
 	"github.com/arrowls/go-metrics/internal/memstorage"
@@ -97,13 +98,23 @@ func (m *PostgresRepository) GetAll(ctx context.Context) (memstorage.MemStorage,
 			return false, fmt.Errorf("error while fetching gauges from database")
 		}
 
+		defer gaugeRows.Close()
+
 		for gaugeRows.Next() {
 			var name string
 			var value float64
 			err := gaugeRows.Scan(&name, &value)
-			if err == nil {
-				storage.Gauge[name] = value
+			if err != nil {
+				m.logger.Errorf("error while fetching gauge from database: %v", err)
+				continue
 			}
+
+			storage.Gauge[name] = value
+		}
+
+		if err := gaugeRows.Err(); err != nil {
+			m.logger.Errorf("error while fetching gauge rows from database: %v", err)
+			return false, err
 		}
 
 		return false, nil
@@ -115,7 +126,6 @@ func (m *PostgresRepository) GetAll(ctx context.Context) (memstorage.MemStorage,
 
 	err = utils.WithRetry(func() (bool, error) {
 		counterRows, dbErr := m.db.Query(ctx, "SELECT name, value FROM counters")
-
 		if dbErr != nil {
 			m.logger.Error(dbErr)
 
@@ -126,13 +136,23 @@ func (m *PostgresRepository) GetAll(ctx context.Context) (memstorage.MemStorage,
 			return false, fmt.Errorf("error while fetching gauges from database")
 		}
 
+		defer counterRows.Close()
+
 		for counterRows.Next() {
 			var name string
 			var value int64
 			err = counterRows.Scan(&name, &value)
-			if err == nil {
-				storage.Counter[name] = value
+			if err != nil {
+				m.logger.Errorf("error while fetching counter from database: %v", err)
+				continue
 			}
+
+			storage.Counter[name] = value
+		}
+
+		if err := counterRows.Err(); err != nil {
+			m.logger.Errorf("error while fetching counter rows from database: %v", err)
+			return false, err
 		}
 
 		return false, nil
@@ -202,7 +222,7 @@ func (m *PostgresRepository) CreateBatch(ctx context.Context, batch []dto.Create
 	}()
 
 	for _, metric := range batch {
-		if metric.Type == "gauge" {
+		if metric.Type == config.GaugeType {
 			_, err = tx.Exec(ctx, `
 			  INSERT INTO gauges (name, value) 
 			  VALUES ($1, $2)
@@ -215,8 +235,8 @@ func (m *PostgresRepository) CreateBatch(ctx context.Context, batch []dto.Create
 			}
 		}
 
-		if metric.Type == "counter" {
-			_, err = m.db.Exec(ctx, `
+		if metric.Type == config.CounterType {
+			_, err = tx.Exec(ctx, `
 				  INSERT INTO counters (name, value) 
 				  VALUES ($1, $2)
 				  ON CONFLICT (name) DO UPDATE
