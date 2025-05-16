@@ -74,7 +74,7 @@ func TestUpdater_Update(t *testing.T) {
 	mockProvider := MockProvider{}
 	logger := logrus.New()
 	logger.SetOutput(io.Discard)
-	updater := New(mockProvider, server.URL, logger)
+	updater := New(mockProvider, server.URL, logger, "")
 
 	updater.Update()
 }

@@ -12,12 +12,14 @@ type AgentConfig struct {
 	ReportInterval int    `env:"REPORT_INTERVAL"`
 	PollInterval   int    `env:"POLL_INTERVAL"`
 	ServerEndpoint string `env:"ADDRESS"`
+	Key            string `env:"KEY"`
 }
 
 func NewAgentConfig() AgentConfig {
 	flag.IntVar(&agentConfig.ReportInterval, "r", reportIntervalDefault, "report interval in seconds")
 	flag.IntVar(&agentConfig.PollInterval, "p", pollIntervalDefault, "collection interval in seconds")
 	flag.StringVar(&agentConfig.ServerEndpoint, "a", serverEndpointDefault, "server endpoint url")
+	flag.StringVar(&serverConfig.Key, "k", "", "encoding key")
 
 	flag.Parse()
 

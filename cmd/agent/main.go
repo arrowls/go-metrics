@@ -17,7 +17,7 @@ func main() {
 	logger.SetFormatter(&logrus.JSONFormatter{})
 	logger.SetLevel(logrus.InfoLevel)
 
-	metricUpdater := updater.New(metricProvider, agentConfig.ServerEndpoint, logger)
+	metricUpdater := updater.New(metricProvider, agentConfig.ServerEndpoint, logger, agentConfig.Key)
 
 	stopChan := make(chan struct{})
 
