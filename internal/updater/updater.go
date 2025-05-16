@@ -3,6 +3,9 @@ package updater
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
@@ -11,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/arrowls/go-metrics/internal/collector"
+	"github.com/arrowls/go-metrics/internal/config"
 	"github.com/arrowls/go-metrics/internal/dto"
 	"github.com/arrowls/go-metrics/internal/mappers"
 	"github.com/arrowls/go-metrics/internal/utils"
@@ -21,9 +25,10 @@ type Updater struct {
 	provider  collector.MetricProvider
 	serverURL string
 	logger    *logrus.Logger
+	encodeKey string
 }
 
-func New(provider collector.MetricProvider, serverURL string, logger *logrus.Logger) MetricConsumer {
+func New(provider collector.MetricProvider, serverURL string, logger *logrus.Logger, encodeKey string) MetricConsumer {
 	if !strings.HasPrefix(serverURL, "http://") {
 		serverURL = "http://" + serverURL
 	}
@@ -31,6 +36,7 @@ func New(provider collector.MetricProvider, serverURL string, logger *logrus.Log
 		provider,
 		serverURL,
 		logger,
+		encodeKey,
 	}
 }
 
@@ -66,14 +72,23 @@ func (u *Updater) Update() {
 			return true, err
 		}
 
+		u.logger.Error(err)
+
 		return false, nil
 	})
 }
 
 func (u *Updater) updateFromDto(updateDto []*dto.Metrics) error {
+	jsonBody, err := json.Marshal(updateDto)
+	if err != nil {
+		u.logger.Errorf("error converting data to JSON: %v", err)
+		return err
+	}
+
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
-	if err := json.NewEncoder(gz).Encode(updateDto); err != nil {
+
+	if _, err := gz.Write(jsonBody); err != nil {
 		u.logger.Errorf("Error marshaling postDto to JSON: %v\n", err)
 		return err
 	}
@@ -88,6 +103,13 @@ func (u *Updater) updateFromDto(updateDto []*dto.Metrics) error {
 		return err
 	}
 	req.Header.Set("Content-Encoding", "gzip")
+
+	if u.encodeKey != "" {
+		hasher := hmac.New(sha256.New, []byte(u.encodeKey))
+		hasher.Write(jsonBody)
+		sum := hex.EncodeToString(hasher.Sum(nil))
+		req.Header.Set(config.HashHeaderName, sum)
+	}
 
 	res, err := http.DefaultClient.Do(req)
 

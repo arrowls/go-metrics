@@ -46,6 +46,7 @@ func ProvideRouter(container di.ContainerInterface) *chi.Mux {
 
 	router.Use(middleware.NewCompressionMiddleware)
 	router.Use(middleware.ProvideLoggingMiddleware(container))
+	router.Use(middleware.ProvideHashingMiddleware(container))
 
 	router.Get("/assets/*", c.Public.HandlePublic)
 	router.Get("/", c.Public.HandleIndex)
