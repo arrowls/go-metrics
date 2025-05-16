@@ -22,16 +22,18 @@ type ServerConfig struct {
 	StoreInterval   int    `env:"STORE_INTERVAL"`
 	StorageFilePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
+	DatabaseDSN     string `env:"DATABASE_DSN"`
 }
 
 var serverConfig ServerConfig
 var agentConfig AgentConfig
 
-func NewServerConfig() ServerConfig {
+func newServerConfig() ServerConfig {
 	flag.StringVar(&serverConfig.ServerEndpoint, "a", serverEndpointDefault, "server endpoint url")
 	flag.IntVar(&serverConfig.StoreInterval, "i", storeIntervalDefault, "interval to write metrics to file")
 	flag.StringVar(&serverConfig.StorageFilePath, "f", storageFilePathDefault, "file to write metrics backup")
 	flag.BoolVar(&serverConfig.Restore, "r", restoreDefault, "restore on startup")
+	flag.StringVar(&serverConfig.DatabaseDSN, "d", "", "database connection string")
 
 	flag.Parse()
 

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -15,15 +16,17 @@ type MockMetric struct {
 	mock.Mock
 }
 
-func (m *MockMetric) AddGaugeValue(key string, value float64) {
+func (m *MockMetric) AddGaugeValue(_ context.Context, key string, value float64) error {
 	m.Mock.Called(key, value)
+	return nil
 }
 
-func (m *MockMetric) AddCounterValue(key string, value int64) {
+func (m *MockMetric) AddCounterValue(_ context.Context, key string, value int64) error {
 	m.Mock.Called(key, value)
+	return nil
 }
 
-func (m *MockMetric) GetAll() memstorage.MemStorage {
+func (m *MockMetric) GetAll(_ context.Context) (memstorage.MemStorage, error) {
 	inst := *memstorage.GetInstance()
 
 	inst.Gauge = map[string]float64{
@@ -36,29 +39,39 @@ func (m *MockMetric) GetAll() memstorage.MemStorage {
 		"key2": 2,
 	}
 
-	return inst
+	return inst, nil
 }
-func (m *MockMetric) GetCounterItem(name string) (int64, error) {
+func (m *MockMetric) GetCounterItem(_ context.Context, name string) (int64, error) {
 	if name != "" {
 		return int64(123), nil
 	}
 	return 0, fmt.Errorf("error")
 }
-func (m *MockMetric) GetGaugeItem(name string) (float64, error) {
+func (m *MockMetric) GetGaugeItem(_ context.Context, name string) (float64, error) {
 	if name != "" {
 		return float64(123), nil
 	}
 	return 0, fmt.Errorf("error")
 }
 
+func (m *MockMetric) CheckConnection(_ context.Context) bool {
+	return true
+}
+
+func (m *MockMetric) CreateBatch(_ context.Context, _ []dto.CreateMetric) error {
+	return nil
+}
+
 func TestMetricService_CreateByType(t *testing.T) {
+	ctx := context.Background()
+
 	metric := &MockMetric{}
 	repo := &repository.Repository{Metric: metric}
 
 	service := NewMetricService(repo)
 
 	t.Run("it should handle invalid type", func(t *testing.T) {
-		err := service.Create(&dto.CreateMetric{
+		err := service.Create(ctx, &dto.CreateMetric{
 			Type:  "non-existent",
 			Name:  "",
 			Value: "",
@@ -69,7 +82,7 @@ func TestMetricService_CreateByType(t *testing.T) {
 
 	t.Run("it should create a metric with Gauge type", func(t *testing.T) {
 		metric.Mock.On("AddGaugeValue", "MetricName", 1.23)
-		err := service.Create(&dto.CreateMetric{
+		err := service.Create(ctx, &dto.CreateMetric{
 			Type:  "gauge",
 			Name:  "MetricName",
 			Value: "1.23",
@@ -82,7 +95,7 @@ func TestMetricService_CreateByType(t *testing.T) {
 
 	t.Run("it should create a metric with Counter type", func(t *testing.T) {
 		metric.Mock.On("AddCounterValue", "MetricName", int64(123))
-		err := service.Create(&dto.CreateMetric{
+		err := service.Create(ctx, &dto.CreateMetric{
 			Type:  "counter",
 			Name:  "MetricName",
 			Value: "123",
@@ -94,7 +107,7 @@ func TestMetricService_CreateByType(t *testing.T) {
 	})
 
 	t.Run("it should handle invalid value", func(t *testing.T) {
-		err := service.Create(&dto.CreateMetric{
+		err := service.Create(ctx, &dto.CreateMetric{
 			Type:  "counter",
 			Name:  "123",
 			Value: "definitely not a number",
@@ -102,7 +115,7 @@ func TestMetricService_CreateByType(t *testing.T) {
 
 		assert.NotNil(t, err)
 
-		err2 := service.Create(&dto.CreateMetric{
+		err2 := service.Create(ctx, &dto.CreateMetric{
 			Type:  "gauge",
 			Name:  "123",
 			Value: "definitely not a number",
@@ -112,7 +125,7 @@ func TestMetricService_CreateByType(t *testing.T) {
 	})
 
 	t.Run("it should return list", func(t *testing.T) {
-		metricMap := service.GetList()
+		metricMap := service.GetList(ctx)
 
 		assert.Equal(t, *metricMap, map[string]interface{}{
 			"key1.1": 1.1,
@@ -123,7 +136,7 @@ func TestMetricService_CreateByType(t *testing.T) {
 	})
 
 	t.Run("it should return item", func(t *testing.T) {
-		value, err := service.GetItem(&dto.GetMetric{
+		value, err := service.GetItem(ctx, &dto.GetMetric{
 			Type: "gauge",
 			Name: "key",
 		})
@@ -131,7 +144,7 @@ func TestMetricService_CreateByType(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, "123", value)
 
-		value, err = service.GetItem(&dto.GetMetric{
+		value, err = service.GetItem(ctx, &dto.GetMetric{
 			Type: "counter",
 			Name: "key",
 		})
@@ -141,7 +154,7 @@ func TestMetricService_CreateByType(t *testing.T) {
 	})
 
 	t.Run("it should handle return item error", func(t *testing.T) {
-		value, err := service.GetItem(&dto.GetMetric{
+		value, err := service.GetItem(ctx, &dto.GetMetric{
 			Type: "",
 			Name: "key",
 		})
@@ -149,14 +162,14 @@ func TestMetricService_CreateByType(t *testing.T) {
 		assert.NotNil(t, err)
 		assert.Equal(t, "", value)
 
-		value, err = service.GetItem(&dto.GetMetric{
+		value, err = service.GetItem(ctx, &dto.GetMetric{
 			Type: "gauge",
 			Name: "",
 		})
 		assert.NotNil(t, err)
 		assert.Equal(t, "", value)
 
-		value, err = service.GetItem(&dto.GetMetric{
+		value, err = service.GetItem(ctx, &dto.GetMetric{
 			Type: "counter",
 			Name: "",
 		})

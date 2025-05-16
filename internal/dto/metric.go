@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/arrowls/go-metrics/internal/apperrors"
+	"github.com/arrowls/go-metrics/internal/config"
 )
 
 type CreateMetric struct {
@@ -29,7 +30,7 @@ func (m *Metrics) Validate() error {
 	if m.ID == "" {
 		return errors.Join(apperrors.ErrBadRequest, fmt.Errorf("metric name not specified"))
 	}
-	if m.MType != "gauge" && m.MType != "counter" {
+	if m.MType != config.GaugeType && m.MType != config.CounterType {
 		return errors.Join(apperrors.ErrNotFound, fmt.Errorf("unknown metric type: %s", m.MType))
 	}
 	return nil

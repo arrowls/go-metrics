@@ -31,7 +31,7 @@ func (c *MetricController) HandleNew(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = c.service.Metric.Create(createDto)
+	err = c.service.Metric.Create(r.Context(), createDto)
 	if err != nil {
 		c.errorHandler.Handle(rw, fmt.Errorf("failed to create metric: %w", err))
 	}
@@ -46,7 +46,7 @@ func (c *MetricController) HandleItem(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	value, err := c.service.Metric.GetItem(getItemDto)
+	value, err := c.service.Metric.GetItem(r.Context(), getItemDto)
 	if err != nil {
 		c.errorHandler.Handle(rw, fmt.Errorf("failed to get metric: %w", err))
 		return
@@ -67,13 +67,13 @@ func (c *MetricController) HandleNewFromBody(rw http.ResponseWriter, r *http.Req
 		return
 	}
 
-	err = c.service.Metric.Create(createDto)
+	err = c.service.Metric.Create(r.Context(), createDto)
 	if err != nil {
 		c.errorHandler.Handle(rw, fmt.Errorf("failed to create metric: %w", err))
 		return
 	}
 
-	updatedValue, err := c.service.Metric.GetItem(&dto.GetMetric{
+	updatedValue, err := c.service.Metric.GetItem(r.Context(), &dto.GetMetric{
 		Type: createDto.Type,
 		Name: createDto.Name,
 	})
@@ -102,7 +102,7 @@ func (c *MetricController) HandleGetItemFromBody(rw http.ResponseWriter, r *http
 		return
 	}
 
-	value, err := c.service.Metric.GetItem(getItemDto)
+	value, err := c.service.Metric.GetItem(r.Context(), getItemDto)
 	if err != nil {
 		c.errorHandler.Handle(rw, fmt.Errorf("failed to fetch metric: %w", err))
 		return
@@ -119,5 +119,20 @@ func (c *MetricController) HandleGetItemFromBody(rw http.ResponseWriter, r *http
 	_, err = rw.Write(response)
 	if err != nil {
 		c.errorHandler.Handle(rw, apperrors.ErrUnknown)
+	}
+}
+
+func (c *MetricController) HandleCreateBatch(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Add("Content-Type", "application/json")
+
+	createBatch, err := mappers.HTTPToCreateMetrics(r)
+	if err != nil {
+		c.errorHandler.Handle(rw, fmt.Errorf("error reading request: %w", err))
+		return
+	}
+
+	err = c.service.Metric.CreateBatch(r.Context(), createBatch)
+	if err != nil {
+		c.errorHandler.Handle(rw, fmt.Errorf("error creating batch: %w", err))
 	}
 }

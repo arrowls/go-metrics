@@ -34,8 +34,6 @@ func TestRunCollectionAndUpdate(t *testing.T) {
 	var pollInterval = time.Duration(agentConfig.PollInterval) * time.Second
 	var reportInterval = time.Duration(agentConfig.ReportInterval) * time.Second
 
-	fmt.Println(pollInterval, reportInterval)
-
 	fmt.Println("Testing RunCollectionAndUpdate() started")
 
 	provider := &MockMetricsProvider{}

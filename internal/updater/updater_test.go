@@ -9,7 +9,9 @@ import (
 	"testing"
 
 	"github.com/arrowls/go-metrics/internal/dto"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type MockProvider struct{}
@@ -26,8 +28,6 @@ func (p MockProvider) AsMap() *map[string]interface{} {
 func (p MockProvider) Collect() {}
 
 func TestUpdater_Update(t *testing.T) {
-	data := *MockProvider{}.AsMap()
-
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		reader, err := gzip.NewReader(r.Body)
 		assert.Nil(t, err)
@@ -35,30 +35,46 @@ func TestUpdater_Update(t *testing.T) {
 		body, err := io.ReadAll(reader)
 		assert.Nil(t, err)
 
-		var metric dto.Metrics
+		expectedBody := `[{"id":"MetricName2","type":"gauge","value":2.22},{"id":"MetricName3","type":"counter","delta":3},{"id":"MetricName4","type":"gauge","value":4.4},{"id":"MetricName1","type":"counter","delta":1}]`
 
-		err = json.Unmarshal(body, &metric)
-		assert.Nil(t, err)
+		var actual, expected []dto.Metrics
 
-		value, found := data[metric.ID]
+		require.NoError(t, json.Unmarshal(body, &actual), "Ошибка декодирования body")
+		require.NoError(t, json.Unmarshal([]byte(expectedBody), &expected), "Ошибка декодирования expectedBody")
 
-		assert.True(t, found)
+		expectedMap := make(map[string]dto.Metrics)
+		for _, m := range expected {
+			key := m.ID + "|" + m.MType
+			expectedMap[key] = m
+		}
 
-		switch v := value.(type) {
-		case float64:
-			assert.Equal(t, v, *metric.Value)
-		case int64:
-			assert.Equal(t, v, *metric.Delta)
-		default:
-			t.Errorf("unknown metric type: %T", value)
+		for _, m := range actual {
+			key := m.ID + "|" + m.MType
+			expectedMetric, ok := expectedMap[key]
+			require.True(t, ok, "Метрика с ID=%s и типом=%s не найдена в ожидаемых данных", m.ID, m.MType)
 
+			if expectedMetric.Delta == nil {
+				require.Nil(t, m.Delta, "Delta для метрики ID=%s должно быть nil", m.ID)
+			} else {
+				require.NotNil(t, m.Delta, "Delta для метрики ID=%s не должно быть nil", m.ID)
+				require.Equal(t, *expectedMetric.Delta, *m.Delta, "Delta для метрики ID=%s не совпадает", m.ID)
+			}
+
+			if expectedMetric.Value == nil {
+				require.Nil(t, m.Value, "Value для метрики ID=%s должно быть nil", m.ID)
+			} else {
+				require.NotNil(t, m.Value, "Value для метрики ID=%s не должно быть nil", m.ID)
+				require.Equal(t, *expectedMetric.Value, *m.Value, "Value для метрики ID=%s не совпадает", m.ID)
+			}
 		}
 	}))
 
 	defer server.Close()
 
 	mockProvider := MockProvider{}
-	updater := New(mockProvider, server.URL)
+	logger := logrus.New()
+	logger.SetOutput(io.Discard)
+	updater := New(mockProvider, server.URL, logger)
 
 	updater.Update()
 }

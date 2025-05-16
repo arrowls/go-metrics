@@ -4,35 +4,39 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
-	"fmt"
+	"errors"
+	"io"
+	"net"
 	"net/http"
 	"strings"
-	"sync"
 
 	"github.com/arrowls/go-metrics/internal/collector"
 	"github.com/arrowls/go-metrics/internal/dto"
 	"github.com/arrowls/go-metrics/internal/mappers"
+	"github.com/arrowls/go-metrics/internal/utils"
+	"github.com/sirupsen/logrus"
 )
 
 type Updater struct {
 	provider  collector.MetricProvider
 	serverURL string
-	wg        *sync.WaitGroup
+	logger    *logrus.Logger
 }
 
-func New(provider collector.MetricProvider, serverURL string) MetricConsumer {
+func New(provider collector.MetricProvider, serverURL string, logger *logrus.Logger) MetricConsumer {
 	if !strings.HasPrefix(serverURL, "http://") {
 		serverURL = "http://" + serverURL
 	}
 	return &Updater{
 		provider,
 		serverURL,
-		&sync.WaitGroup{},
+		logger,
 	}
 }
 
 func (u *Updater) Update() {
 	data := u.provider.AsMap()
+	var metrics []*dto.Metrics
 
 	for metricType, metricValue := range *data {
 		updateDto, err := mappers.MetricToDTO(metricType, metricValue)
@@ -40,43 +44,63 @@ func (u *Updater) Update() {
 			continue
 		}
 
-		u.wg.Add(1)
-		go u.updateFromDto(updateDto)
+		metrics = append(metrics, updateDto)
 	}
 
-	u.wg.Wait()
+	_ = utils.WithRetry(func() (bool, error) {
+		err := u.updateFromDto(metrics)
+		if err == nil {
+			return false, nil
+		}
+
+		var netErr net.Error
+		if errors.As(err, &netErr) && netErr.Timeout() {
+			return true, netErr
+		}
+
+		if strings.Contains(err.Error(), "connection refused") {
+			return true, err
+		}
+
+		if errors.Is(err, io.EOF) {
+			return true, err
+		}
+
+		return false, nil
+	})
 }
 
-func (u *Updater) updateFromDto(updateDto *dto.Metrics) {
-	defer u.wg.Done()
+func (u *Updater) updateFromDto(updateDto []*dto.Metrics) error {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	if err := json.NewEncoder(gz).Encode(updateDto); err != nil {
-		fmt.Printf("Error marshaling postDto to JSON: %v\n", err)
-		return
+		u.logger.Errorf("Error marshaling postDto to JSON: %v\n", err)
+		return err
 	}
 
 	if errClose := gz.Close(); errClose != nil {
-		fmt.Printf("Error closing gzip writer: %+v", errClose)
-		return
+		u.logger.Errorf("Error closing gzip writer: %+v", errClose)
+		return errClose
 	}
-	req, err := http.NewRequest("POST", u.serverURL+"/update", &buf)
+	req, err := http.NewRequest("POST", u.serverURL+"/updates", &buf)
 	if err != nil {
-		fmt.Printf("Error creating request: %v\n", err)
-		return
+		u.logger.Errorf("Error creating request: %v\n", err)
+		return err
 	}
 	req.Header.Set("Content-Encoding", "gzip")
 
 	res, err := http.DefaultClient.Do(req)
 
 	if err != nil {
-		fmt.Printf("Error posting metric: %v\n", err)
-		return
+		u.logger.Errorf("Error posting metric: %v\n", err)
+		return err
 	}
 
 	defer func() {
 		if errClose := res.Body.Close(); errClose != nil {
-			fmt.Printf("Error closing Body: %+v", errClose)
+			u.logger.Errorf("Error closing Body: %+v", errClose)
 		}
 	}()
+
+	return nil
 }
