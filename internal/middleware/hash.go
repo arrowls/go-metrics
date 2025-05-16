@@ -51,6 +51,9 @@ func NewHashingMiddleware(serverConfig config.ServerConfig, logger *logrus.Logge
 
 				hash := r.Header.Get(config.HashHeaderName)
 				if hash == "" {
+					next.ServeHTTP(w, r)
+					return
+
 					logger.Error("hash key was provided, but request header is empty")
 					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(http.StatusBadRequest)
