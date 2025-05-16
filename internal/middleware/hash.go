@@ -53,6 +53,7 @@ func NewHashingMiddleware(serverConfig config.ServerConfig, logger *logrus.Logge
 				if hash == "" {
 					logger.Error("hash key was provided, but request header is empty")
 					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusBadRequest)
 					_, err = w.Write(apperrors.ErrorResponse("empty hash"))
 					if err != nil {
 						logger.Errorf("error writing error response: %v", err)
