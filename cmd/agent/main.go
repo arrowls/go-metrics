@@ -12,42 +12,32 @@ import (
 func main() {
 	agentConfig := config.NewAgentConfig()
 	metricProvider := collector.New()
+	additionalMetricProvider := collector.NewAdditionalCollector()
 
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.JSONFormatter{})
 	logger.SetLevel(logrus.InfoLevel)
 
-	metricUpdater := updater.New(metricProvider, agentConfig.ServerEndpoint, logger)
+	generatorChan := make(chan *map[string]interface{}, agentConfig.RateLimit)
+	metricUpdater := updater.New(metricProvider, agentConfig.ServerEndpoint, logger, agentConfig.Key, generatorChan)
 
-	stopChan := make(chan struct{})
+	collectionTicker := time.NewTicker(time.Duration(agentConfig.PollInterval) * time.Second)
+	updateTicker := time.NewTicker(time.Duration(agentConfig.ReportInterval) * time.Second)
 
-	RunCollectionAndUpdate(
-		metricProvider,
-		time.Duration(agentConfig.PollInterval)*time.Second,
-		metricUpdater,
-		time.Duration(agentConfig.ReportInterval)*time.Second,
-	)
+	for {
+		select {
+		case <-collectionTicker.C:
+			go func() {
+				metricProvider.Collect()
+				generatorChan <- metricProvider.AsMap()
+			}()
 
-	<-stopChan
-}
-
-func RunCollectionAndUpdate(
-	provider collector.MetricProvider,
-	collectInterval time.Duration,
-	consumer updater.MetricConsumer,
-	updateInterval time.Duration,
-) {
-	go func() {
-		for {
-			provider.Collect()
-			time.Sleep(collectInterval)
+			go func() {
+				additionalMetricProvider.Collect()
+				generatorChan <- additionalMetricProvider.AsMap()
+			}()
+		case <-updateTicker.C:
+			go metricUpdater.Update()
 		}
-	}()
-
-	go func() {
-		for {
-			time.Sleep(updateInterval)
-			consumer.Update()
-		}
-	}()
+	}
 }
