@@ -13,6 +13,7 @@ type AgentConfig struct {
 	PollInterval   int    `env:"POLL_INTERVAL"`
 	ServerEndpoint string `env:"ADDRESS"`
 	Key            string `env:"KEY"`
+	RateLimit      int    `env:"RATE_LIMIT"`
 }
 
 func NewAgentConfig() AgentConfig {
@@ -20,6 +21,7 @@ func NewAgentConfig() AgentConfig {
 	flag.IntVar(&agentConfig.PollInterval, "p", pollIntervalDefault, "collection interval in seconds")
 	flag.StringVar(&agentConfig.ServerEndpoint, "a", serverEndpointDefault, "server endpoint url")
 	flag.StringVar(&serverConfig.Key, "k", "", "encoding key")
+	flag.IntVar(&agentConfig.RateLimit, "l", 0, "max requests to server")
 
 	flag.Parse()
 

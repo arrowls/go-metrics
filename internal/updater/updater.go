@@ -26,9 +26,10 @@ type Updater struct {
 	serverURL string
 	logger    *logrus.Logger
 	encodeKey string
+	dataChan  chan *map[string]interface{}
 }
 
-func New(provider collector.MetricProvider, serverURL string, logger *logrus.Logger, encodeKey string) MetricConsumer {
+func New(provider collector.MetricProvider, serverURL string, logger *logrus.Logger, encodeKey string, dataChan chan *map[string]interface{}) MetricConsumer {
 	if !strings.HasPrefix(serverURL, "http://") {
 		serverURL = "http://" + serverURL
 	}
@@ -37,45 +38,61 @@ func New(provider collector.MetricProvider, serverURL string, logger *logrus.Log
 		serverURL,
 		logger,
 		encodeKey,
+		dataChan,
 	}
 }
 
 func (u *Updater) Update() {
-	data := u.provider.AsMap()
-	var metrics []*dto.Metrics
+	var batch []*map[string]interface{}
 
-	for metricType, metricValue := range *data {
-		updateDto, err := mappers.MetricToDTO(metricType, metricValue)
-		if err != nil {
-			continue
+loop:
+	for {
+		select {
+		case data := <-u.dataChan:
+			batch = append(batch, data)
+		default:
+			break loop
 		}
-
-		metrics = append(metrics, updateDto)
 	}
 
-	_ = utils.WithRetry(func() (bool, error) {
-		err := u.updateFromDto(metrics)
-		if err == nil {
-			return false, nil
-		}
+	for _, data := range batch {
+		go func(data *map[string]interface{}) {
+			var metrics []*dto.Metrics
 
-		var netErr net.Error
-		if errors.As(err, &netErr) && netErr.Timeout() {
-			return true, netErr
-		}
+			for metricType, metricValue := range *data {
+				updateDto, err := mappers.MetricToDTO(metricType, metricValue)
+				if err != nil {
+					continue
+				}
 
-		if strings.Contains(err.Error(), "connection refused") {
-			return true, err
-		}
+				metrics = append(metrics, updateDto)
+			}
 
-		if errors.Is(err, io.EOF) {
-			return true, err
-		}
+			_ = utils.WithRetry(func() (bool, error) {
+				err := u.updateFromDto(metrics)
+				if err == nil {
+					return false, nil
+				}
 
-		u.logger.Error(err)
+				var netErr net.Error
+				if errors.As(err, &netErr) && netErr.Timeout() {
+					return true, netErr
+				}
 
-		return false, nil
-	})
+				if strings.Contains(err.Error(), "connection refused") {
+					return true, err
+				}
+
+				if errors.Is(err, io.EOF) {
+					return true, err
+				}
+
+				u.logger.Error(err)
+
+				return false, nil
+			})
+		}(data)
+	}
 }
 
 func (u *Updater) updateFromDto(updateDto []*dto.Metrics) error {

@@ -17,37 +17,21 @@ func main() {
 	logger.SetFormatter(&logrus.JSONFormatter{})
 	logger.SetLevel(logrus.InfoLevel)
 
-	metricUpdater := updater.New(metricProvider, agentConfig.ServerEndpoint, logger, agentConfig.Key)
+	generatorChan := make(chan *map[string]interface{}, agentConfig.RateLimit)
+	metricUpdater := updater.New(metricProvider, agentConfig.ServerEndpoint, logger, agentConfig.Key, generatorChan)
 
-	stopChan := make(chan struct{})
+	collectionTicker := time.NewTicker(time.Duration(agentConfig.PollInterval) * time.Second)
+	updateTicker := time.NewTicker(time.Duration(agentConfig.ReportInterval) * time.Second)
 
-	RunCollectionAndUpdate(
-		metricProvider,
-		time.Duration(agentConfig.PollInterval)*time.Second,
-		metricUpdater,
-		time.Duration(agentConfig.ReportInterval)*time.Second,
-	)
-
-	<-stopChan
-}
-
-func RunCollectionAndUpdate(
-	provider collector.MetricProvider,
-	collectInterval time.Duration,
-	consumer updater.MetricConsumer,
-	updateInterval time.Duration,
-) {
-	go func() {
-		for {
-			provider.Collect()
-			time.Sleep(collectInterval)
+	for {
+		select {
+		case <-collectionTicker.C:
+			go func() {
+				metricProvider.Collect()
+				generatorChan <- metricProvider.AsMap()
+			}()
+		case <-updateTicker.C:
+			go metricUpdater.Update()
 		}
-	}()
-
-	go func() {
-		for {
-			time.Sleep(updateInterval)
-			consumer.Update()
-		}
-	}()
+	}
 }
