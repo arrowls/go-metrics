@@ -74,7 +74,10 @@ func TestUpdater_Update(t *testing.T) {
 	mockProvider := MockProvider{}
 	logger := logrus.New()
 	logger.SetOutput(io.Discard)
-	updater := New(mockProvider, server.URL, logger, "")
 
+	ch := make(chan *map[string]interface{}, 1)
+	updater := New(mockProvider, server.URL, logger, "", ch)
+
+	ch <- mockProvider.AsMap()
 	updater.Update()
 }
