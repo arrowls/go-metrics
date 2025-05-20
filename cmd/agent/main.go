@@ -12,6 +12,7 @@ import (
 func main() {
 	agentConfig := config.NewAgentConfig()
 	metricProvider := collector.New()
+	additionalMetricProvider := collector.NewAdditionalCollector()
 
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.JSONFormatter{})
@@ -29,6 +30,11 @@ func main() {
 			go func() {
 				metricProvider.Collect()
 				generatorChan <- metricProvider.AsMap()
+			}()
+
+			go func() {
+				additionalMetricProvider.Collect()
+				generatorChan <- additionalMetricProvider.AsMap()
 			}()
 		case <-updateTicker.C:
 			go metricUpdater.Update()
