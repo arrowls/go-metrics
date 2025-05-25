@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/arrowls/go-metrics/internal/collector"
 	"github.com/arrowls/go-metrics/internal/config"
@@ -128,7 +129,11 @@ func (u *Updater) updateFromDto(updateDto []*dto.Metrics) error {
 		req.Header.Set(config.HashHeaderName, sum)
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	client := http.Client{
+		Timeout: 3 * time.Second,
+	}
+
+	res, err := client.Do(req)
 
 	if err != nil {
 		u.logger.Errorf("Error posting metric: %v\n", err)
