@@ -1,6 +1,7 @@
 package config
 
 const (
-	GaugeType   = "gauge"
-	CounterType = "counter"
+	GaugeType      = "gauge"
+	CounterType    = "counter"
+	HashHeaderName = "HashSHA256"
 )
