@@ -23,6 +23,7 @@ type ServerConfig struct {
 	StorageFilePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
+	Key             string `env:"KEY"`
 }
 
 var serverConfig ServerConfig
@@ -34,6 +35,7 @@ func newServerConfig() ServerConfig {
 	flag.StringVar(&serverConfig.StorageFilePath, "f", storageFilePathDefault, "file to write metrics backup")
 	flag.BoolVar(&serverConfig.Restore, "r", restoreDefault, "restore on startup")
 	flag.StringVar(&serverConfig.DatabaseDSN, "d", "", "database connection string")
+	flag.StringVar(&serverConfig.Key, "k", "", "encoding key")
 
 	flag.Parse()
 

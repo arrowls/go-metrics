@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/arrowls/go-metrics/internal/config"
 	"github.com/arrowls/go-metrics/internal/di"
 	"github.com/arrowls/go-metrics/internal/logger"
 )
@@ -32,6 +33,26 @@ func ProvideLoggingMiddleware(container di.ContainerInterface) func(next http.Ha
 	}
 
 	if err := container.Add(diKey, middleware); err != nil {
+		log.Fatal(err)
+	}
+
+	return middleware
+}
+
+const hashingDiKey = "hashing_middleware"
+
+func ProvideHashingMiddleware(container di.ContainerInterface) func(next http.Handler) http.Handler {
+	middlewareInst := container.Get(hashingDiKey)
+	if middleware, ok := middlewareInst.(func(next http.Handler) http.Handler); ok {
+		return middleware
+	}
+
+	middleware := NewHashingMiddleware(
+		config.ProvideServerConfig(container),
+		logger.ProvideLogger(container),
+	)
+
+	if err := container.Add(hashingDiKey, middleware); err != nil {
 		log.Fatal(err)
 	}
 
