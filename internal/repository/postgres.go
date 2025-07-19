@@ -28,6 +28,7 @@ func NewPostgresRepository(db *pgxpool.Pool, logger *logrus.Logger) Metric {
 		logger,
 	}
 }
+
 func (m *PostgresRepository) AddGaugeValue(ctx context.Context, name string, value float64) error {
 	err := utils.WithRetry(func() (bool, error) {
 		_, dbErr := m.db.Exec(ctx, `
@@ -133,7 +134,7 @@ func (m *PostgresRepository) GetAll(ctx context.Context) (memstorage.MemStorage,
 				return true, dbErr
 			}
 
-			return false, fmt.Errorf("error while fetching gauges from database")
+			return false, fmt.Errorf("error while fetching counters from database")
 		}
 
 		defer counterRows.Close()

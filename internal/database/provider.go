@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/arrowls/go-metrics/internal/config"
 	"github.com/arrowls/go-metrics/internal/di"
@@ -21,7 +22,19 @@ func ProvideDatabasePool(container di.ContainerInterface) (*pgxpool.Pool, error)
 		return pool, nil
 	}
 
-	pool, err := pgxpool.New(context.Background(), cfg.DatabaseDSN)
+	dbConfig, err := pgxpool.ParseConfig(cfg.DatabaseDSN)
+	if err != nil {
+		loggerInst.Fatal("failed to parse database config: " + err.Error())
+		return nil, err
+	}
+
+	dbConfig.MaxConns = 20
+	dbConfig.MinConns = 5
+	dbConfig.MaxConnLifetime = time.Hour
+	dbConfig.MaxConnIdleTime = 30 * time.Minute
+	dbConfig.HealthCheckPeriod = time.Minute
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), dbConfig)
 	if err != nil {
 		loggerInst.Fatal("failed to connect to database: " + err.Error())
 		return nil, err
