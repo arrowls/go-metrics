@@ -68,8 +68,7 @@ func TestContainer_Concurrency(t *testing.T) {
 }
 
 func TestContainer_Interface(t *testing.T) {
-	var container ContainerInterface
-	container = NewContainer()
+	container := NewContainer()
 
 	assert.NotNil(t, container, "Expected container to implement ContainerInterface")
 }

@@ -183,8 +183,8 @@ func TestNewCompressionMiddleware_WithoutGzip(t *testing.T) {
 	}
 
 	// Проверяем, что данные не сжаты
-	if string(recorder.Body.Bytes()) != "test response" {
-		t.Errorf("Expected 'test response', got '%s'", string(recorder.Body.Bytes()))
+	if recorder.Body.String() != "test response" {
+		t.Errorf("Expected 'test response', got '%s'", recorder.Body.String())
 	}
 }
 

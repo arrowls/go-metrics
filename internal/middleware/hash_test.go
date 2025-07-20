@@ -175,7 +175,6 @@ func TestResponseWriter_WriteHeader(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	writer := &responseWriter{
 		ResponseWriter: recorder,
-		body:           []byte{},
 	}
 
 	writer.WriteHeader(http.StatusNotFound)

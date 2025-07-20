@@ -125,8 +125,8 @@ func ExampleMetricController_HandleGetItemFromBody() {
 		MType: config.CounterType,
 		Delta: func() *int64 { v := int64(100); return &v }(),
 	}
-	createJson, _ := json.Marshal(createData)
-	createReq := httptest.NewRequest("POST", "/update", bytes.NewReader(createJson))
+	createJSON, _ := json.Marshal(createData)
+	createReq := httptest.NewRequest("POST", "/update", bytes.NewReader(createJSON))
 	createReq.Header.Set("Content-Type", "application/json")
 	createW := httptest.NewRecorder()
 	controller.HandleNewFromBody(createW, createReq)
@@ -136,8 +136,8 @@ func ExampleMetricController_HandleGetItemFromBody() {
 		ID:    "counterMetric",
 		MType: config.CounterType,
 	}
-	getJson, _ := json.Marshal(getData)
-	req := httptest.NewRequest("POST", "/value", bytes.NewReader(getJson))
+	getJSON, _ := json.Marshal(getData)
+	req := httptest.NewRequest("POST", "/value", bytes.NewReader(getJSON))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -256,8 +256,8 @@ func ExampleHTTPClient_CompleteWorkflow() {
 		MType: config.CounterType,
 		Delta: func() *int64 { v := int64(1); return &v }(),
 	}
-	counterJson, _ := json.Marshal(counterData)
-	counterReq := httptest.NewRequest("POST", "/update", bytes.NewReader(counterJson))
+	counterJSON, _ := json.Marshal(counterData)
+	counterReq := httptest.NewRequest("POST", "/update", bytes.NewReader(counterJSON))
 	counterReq.Header.Set("Content-Type", "application/json")
 	counterW := httptest.NewRecorder()
 	metricController.HandleNewFromBody(counterW, counterReq)
@@ -274,8 +274,8 @@ func ExampleHTTPClient_CompleteWorkflow() {
 		ID:    "request_count",
 		MType: config.CounterType,
 	}
-	getCounterJson, _ := json.Marshal(getCounterData)
-	getCounterReq := httptest.NewRequest("POST", "/value", bytes.NewReader(getCounterJson))
+	getCounterJSON, _ := json.Marshal(getCounterData)
+	getCounterReq := httptest.NewRequest("POST", "/value", bytes.NewReader(getCounterJSON))
 	getCounterReq.Header.Set("Content-Type", "application/json")
 	getCounterW := httptest.NewRecorder()
 	metricController.HandleGetItemFromBody(getCounterW, getCounterReq)
@@ -294,8 +294,8 @@ func ExampleHTTPClient_CompleteWorkflow() {
 			Delta: func() *int64 { v := int64(5); return &v }(),
 		},
 	}
-	batchJson, _ := json.Marshal(batchData)
-	batchReq := httptest.NewRequest("POST", "/updates", bytes.NewReader(batchJson))
+	batchJSON, _ := json.Marshal(batchData)
+	batchReq := httptest.NewRequest("POST", "/updates", bytes.NewReader(batchJSON))
 	batchReq.Header.Set("Content-Type", "application/json")
 	batchW := httptest.NewRecorder()
 	metricController.HandleCreateBatch(batchW, batchReq)
@@ -335,8 +335,8 @@ func ExampleErrorHandling() {
 	fmt.Printf("Invalid type - Status: %d, Response: %s\n", w2.Code, strings.TrimSpace(w2.Body.String()))
 
 	// 3. Попытка отправить некорректный JSON
-	invalidJson := []byte(`{"invalid": "json"`)
-	req3 := httptest.NewRequest("POST", "/update", bytes.NewReader(invalidJson))
+	invalidJSON := []byte(`{"invalid": "json"`)
+	req3 := httptest.NewRequest("POST", "/update", bytes.NewReader(invalidJSON))
 	req3.Header.Set("Content-Type", "application/json")
 	w3 := httptest.NewRecorder()
 	controller.HandleNewFromBody(w3, req3)

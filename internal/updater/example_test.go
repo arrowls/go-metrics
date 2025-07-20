@@ -80,9 +80,9 @@ func ExampleUpdater_Update() {
 	// Metrics sent successfully
 }
 
-// ExampleMetricCollection демонстрирует процесс сбора метрик.
+// Example демонстрирует процесс сбора метрик.
 // Показывает как коллектор собирает системные метрики
-func ExampleMetricCollection() {
+func Example() {
 	// Создаем коллектор метрик
 	metricCollector := collector.New()
 	additionalCollector := collector.NewAdditionalCollector()
@@ -166,7 +166,7 @@ func ExampleMetricToDTO() {
 
 // ExampleBatchUpdate демонстрирует пакетную отправку метрик.
 // Показывает как агент собирает все метрики и отправляет их одним запросом
-func ExampleBatchUpdate() {
+func Example_n2() {
 	// Создаем мок сервер
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var metrics []dto.Metrics
@@ -219,7 +219,7 @@ func ExampleBatchUpdate() {
 
 // ExampleRetryMechanism демонстрирует механизм повторных попыток.
 // Показывает как агент обрабатывает временные ошибки сети
-func ExampleRetryMechanism() {
+func Example_n3() {
 	// Создаем сервер который сначала отказывает, потом работает
 	attempts := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -259,7 +259,7 @@ func ExampleRetryMechanism() {
 
 // ExampleCompressionAndSigning демонстрирует сжатие и подпись метрик.
 // Показывает как агент сжимает данные и добавляет подпись
-func ExampleCompressionAndSigning() {
+func Example_n4() {
 	// Создаем сервер который проверяет сжатие и подпись
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Проверяем заголовки
