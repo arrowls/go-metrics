@@ -1,3 +1,5 @@
+// Package middleware содержит HTTP middleware компоненты.
+// Включает сжатие, логирование, хеширование и другие промежуточные обработчики.
 package middleware
 
 import (
@@ -9,18 +11,27 @@ import (
 	"sync"
 )
 
+// gzipWriterPool - пул gzip writer'ов для переиспользования объектов.
+// Уменьшает нагрузку на GC при частом использовании сжатия.
 var gzipWriterPool = sync.Pool{
 	New: func() interface{} {
 		return gzip.NewWriter(nil)
 	},
 }
 
+// CompressWriter оборачивает http.ResponseWriter для сжатия ответов.
+// Автоматически сжимает данные в gzip формат при отправке клиенту.
 type CompressWriter struct {
+	// responseWriter - оригинальный ResponseWriter
 	responseWriter http.ResponseWriter
-	gzipWriter     *gzip.Writer
-	pooled         bool
+	// gzipWriter - gzip writer для сжатия данных
+	gzipWriter *gzip.Writer
+	// pooled - флаг использования объекта из пула
+	pooled bool
 }
 
+// NewCompressWriter создает новый CompressWriter.
+// Получает gzip writer из пула и настраивает его для записи в responseWriter.
 func NewCompressWriter(w http.ResponseWriter) *CompressWriter {
 	gw := gzipWriterPool.Get().(*gzip.Writer)
 	gw.Reset(w)

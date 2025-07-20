@@ -1,3 +1,4 @@
+// Package middleware содержит HTTP middleware компоненты.
 package middleware
 
 import (
@@ -13,16 +14,25 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// responseWriter оборачивает http.ResponseWriter для перехвата тела ответа.
+// Позволяет получить тело ответа для вычисления хеша подписи.
 type responseWriter struct {
 	http.ResponseWriter
+	// body - накопленное тело ответа для вычисления хеша
 	body []byte
 }
 
+// Write перехватывает запись в ResponseWriter и сохраняет данные в body.
+// Позволяет получить полное тело ответа для подписи.
 func (rw *responseWriter) Write(b []byte) (int, error) {
 	rw.body = append(rw.body, b...)
 	return rw.ResponseWriter.Write(b)
 }
 
+// NewHashingMiddleware создает middleware для проверки и добавления хеш-подписи.
+// Проверяет HMAC-SHA256 подпись входящих запросов и добавляет подпись к ответам.
+// Использует ключ из конфигурации сервера для вычисления подписи.
+// Если ключ не задан, middleware пропускает запросы без изменений.
 func NewHashingMiddleware(serverConfig config.ServerConfig, logger *logrus.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

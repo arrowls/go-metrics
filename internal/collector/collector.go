@@ -1,3 +1,5 @@
+// Package collector содержит компоненты для сбора системных метрик.
+// Включает сбор метрик runtime Go и дополнительных системных метрик.
 package collector
 
 import (
@@ -6,6 +8,9 @@ import (
 	"sync"
 )
 
+// Collector собирает метрики runtime Go.
+// Содержит все основные метрики памяти и сборщика мусора,
+// а также счетчик опросов и случайное значение для тестирования.
 type Collector struct {
 	Alloc         float64
 	BuckHashSys   float64
@@ -39,10 +44,15 @@ type Collector struct {
 	Mutex         sync.Mutex
 }
 
+// New создает новый экземпляр коллектора метрик.
+// Возвращает интерфейс MetricProvider для работы с метриками.
 func New() MetricProvider {
 	return &Collector{}
 }
 
+// Collect собирает текущие метрики runtime Go.
+// Читает статистику памяти и обновляет все поля структуры.
+// Метод потокобезопасен благодаря использованию мьютекса.
 func (c *Collector) Collect() {
 	memstats := runtime.MemStats{}
 

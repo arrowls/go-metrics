@@ -1,3 +1,5 @@
+// Package main содержит точку входа для агента сбора метрик.
+// Агент периодически собирает системные метрики и отправляет их на сервер.
 package main
 
 import (
@@ -9,6 +11,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// main запускает агент сбора метрик.
+// Агент работает в бесконечном цикле, собирая метрики с заданными интервалами
+// и отправляя их на сервер через HTTP API.
 func main() {
 	agentConfig := config.NewAgentConfig()
 	metricProvider := collector.New()

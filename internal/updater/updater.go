@@ -1,3 +1,5 @@
+// Package updater содержит компоненты для отправки метрик на сервер.
+// Включает HTTP клиент с поддержкой сжатия, подписи и повторных попыток.
 package updater
 
 import (
@@ -22,14 +24,24 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Updater отправляет метрики на HTTP сервер.
+// Поддерживает сжатие gzip, подпись HMAC-SHA256 и повторные попытки при ошибках.
 type Updater struct {
-	provider  collector.MetricProvider
+	// provider - поставщик метрик для отправки
+	provider collector.MetricProvider
+	// serverURL - URL сервера для отправки метрик
 	serverURL string
-	logger    *logrus.Logger
+	// logger - логгер для записи событий
+	logger *logrus.Logger
+	// encodeKey - ключ для подписи метрик
 	encodeKey string
-	dataChan  chan *map[string]interface{}
+	// dataChan - канал для получения метрик от коллектора
+	dataChan chan *map[string]interface{}
 }
 
+// New создает новый экземпляр Updater.
+// Автоматически добавляет протокол http:// к URL если он отсутствует.
+// Возвращает интерфейс MetricConsumer для работы с метриками.
 func New(provider collector.MetricProvider, serverURL string, logger *logrus.Logger, encodeKey string, dataChan chan *map[string]interface{}) MetricConsumer {
 	if !strings.HasPrefix(serverURL, "http://") {
 		serverURL = "http://" + serverURL

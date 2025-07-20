@@ -1,3 +1,4 @@
+// Package collector содержит компоненты для сбора системных метрик.
 package collector
 
 import (
@@ -7,17 +8,28 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 )
 
+// AdditionalCollector собирает дополнительные системные метрики.
+// Использует библиотеку gopsutil для получения информации о памяти и CPU.
 type AdditionalCollector struct {
-	TotalMemory     float64
-	FreeMemory      float64
+	// TotalMemory - общий объем памяти системы в байтах
+	TotalMemory float64
+	// FreeMemory - свободный объем памяти в байтах
+	FreeMemory float64
+	// CPUutilization1 - количество логических CPU ядер
 	CPUutilization1 float64
-	Mutex           sync.Mutex
+	// Mutex - мьютекс для потокобезопасного доступа к метрикам
+	Mutex sync.Mutex
 }
 
+// NewAdditionalCollector создает новый экземпляр дополнительного коллектора.
+// Возвращает интерфейс MetricProvider для работы с метриками.
 func NewAdditionalCollector() MetricProvider {
 	return &AdditionalCollector{}
 }
 
+// Collect собирает дополнительные системные метрики.
+// Читает информацию о памяти и CPU с помощью библиотеки gopsutil.
+// Метод потокобезопасен благодаря использованию мьютекса.
 func (c *AdditionalCollector) Collect() {
 	c.Mutex.Lock()
 	defer c.Mutex.Unlock()

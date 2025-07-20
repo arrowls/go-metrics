@@ -1,3 +1,4 @@
+// Package config содержит конфигурацию для сервера и агента метрик.
 package config
 
 import (
@@ -17,18 +18,29 @@ const (
 	restoreDefault         = false
 )
 
+// ServerConfig содержит конфигурацию для HTTP сервера метрик.
+// Настройки могут быть заданы через переменные окружения или флаги командной строки.
 type ServerConfig struct {
-	ServerEndpoint  string `env:"ADDRESS"`
-	StoreInterval   int    `env:"STORE_INTERVAL"`
+	// ServerEndpoint - адрес и порт для прослушивания HTTP запросов
+	ServerEndpoint string `env:"ADDRESS"`
+	// StoreInterval - интервал в секундах для сохранения метрик в файл
+	StoreInterval int `env:"STORE_INTERVAL"`
+	// StorageFilePath - путь к файлу для сохранения метрик
 	StorageFilePath string `env:"FILE_STORAGE_PATH"`
-	Restore         bool   `env:"RESTORE"`
-	DatabaseDSN     string `env:"DATABASE_DSN"`
-	Key             string `env:"KEY"`
+	// Restore - флаг для восстановления метрик из файла при запуске
+	Restore bool `env:"RESTORE"`
+	// DatabaseDSN - строка подключения к базе данных PostgreSQL
+	DatabaseDSN string `env:"DATABASE_DSN"`
+	// Key - ключ для подписи и проверки целостности метрик
+	Key string `env:"KEY"`
 }
 
 var serverConfig ServerConfig
 var agentConfig AgentConfig
 
+// newServerConfig создает и инициализирует конфигурацию сервера.
+// Читает настройки из флагов командной строки и переменных окружения.
+// Переменные окружения имеют приоритет над флагами командной строки.
 func newServerConfig() ServerConfig {
 	flag.StringVar(&serverConfig.ServerEndpoint, "a", serverEndpointDefault, "server endpoint url")
 	flag.IntVar(&serverConfig.StoreInterval, "i", storeIntervalDefault, "interval to write metrics to file")

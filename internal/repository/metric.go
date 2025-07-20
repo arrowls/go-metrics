@@ -1,3 +1,4 @@
+// Package repository содержит слой доступа к данным для метрик.
 package repository
 
 import (
@@ -12,16 +13,24 @@ import (
 	"github.com/arrowls/go-metrics/internal/memstorage"
 )
 
+// MetricRepository реализует интерфейс Metric для работы с метриками в памяти.
+// Использует MemStorage для хранения gauge и counter метрик.
 type MetricRepository struct {
+	// storage - хранилище метрик в памяти
 	storage *memstorage.MemStorage
 }
 
+// NewMetricRepository создает новый экземпляр репозитория метрик.
+// Принимает хранилище метрик и возвращает настроенный репозиторий.
 func NewMetricRepository(storage *memstorage.MemStorage) Metric {
 	return &MetricRepository{
 		storage: storage,
 	}
 }
 
+// AddGaugeValue добавляет или обновляет gauge метрику в памяти.
+// Gauge метрики перезаписывают предыдущее значение.
+// Метод потокобезопасен благодаря блокировке хранилища.
 func (m *MetricRepository) AddGaugeValue(_ context.Context, name string, value float64) error {
 	m.storage.Lock()
 	defer m.storage.Unlock()

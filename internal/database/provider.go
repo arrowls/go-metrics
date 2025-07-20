@@ -1,3 +1,5 @@
+// Package database содержит компоненты для работы с базой данных PostgreSQL.
+// Включает подключение, миграции и провайдер пула соединений.
 package database
 
 import (
@@ -11,8 +13,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// diKey - ключ для хранения пула соединений в контейнере зависимостей
 const diKey = "database_pool"
 
+// ProvideDatabasePool предоставляет пул соединений с базой данных PostgreSQL.
+// Создает и настраивает пул соединений с оптимальными параметрами:
+// - Максимум 20 соединений
+// - Минимум 5 соединений
+// - Время жизни соединения: 1 час
+// - Время простоя соединения: 30 минут
+// - Период проверки здоровья: 1 минута
+// Автоматически выполняет миграции при первом подключении.
 func ProvideDatabasePool(container di.ContainerInterface) (*pgxpool.Pool, error) {
 	cfg := config.ProvideServerConfig(container)
 	loggerInst := logger.ProvideLogger(container)

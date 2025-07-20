@@ -1,3 +1,5 @@
+// Package main содержит точку входа для сервера метрик.
+// Сервер предоставляет HTTP API для сохранения и получения метрик.
 package main
 
 import (
@@ -17,6 +19,9 @@ import (
 	"github.com/arrowls/go-metrics/internal/logger"
 )
 
+// main запускает HTTP сервер для обработки метрик.
+// Сервер настраивается через переменные окружения и флаги командной строки.
+// Поддерживает graceful shutdown при получении сигналов SIGINT или SIGTERM.
 func main() {
 	container := di.NewContainer()
 
