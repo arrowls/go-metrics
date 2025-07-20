@@ -1,3 +1,4 @@
+// Package controller содержит HTTP контроллеры для обработки запросов.
 package controller
 
 import (
@@ -10,11 +11,17 @@ import (
 	"github.com/arrowls/go-metrics/internal/service"
 )
 
+// MetricController реализует интерфейс Metric для HTTP обработки метрик.
+// Содержит бизнес-логику валидации запросов и формирования ответов.
 type MetricController struct {
-	service      service.Service
+	// service - сервис для работы с метриками
+	service service.Service
+	// errorHandler - обработчик ошибок HTTP запросов
 	errorHandler ErrorHandler
 }
 
+// NewMetricController создает новый экземпляр контроллера метрик.
+// Принимает сервис метрик и обработчик ошибок.
 func NewMetricController(service *service.Service, handler ErrorHandler) *MetricController {
 	return &MetricController{
 		service:      *service,
@@ -22,6 +29,9 @@ func NewMetricController(service *service.Service, handler ErrorHandler) *Metric
 	}
 }
 
+// HandleNew обрабатывает POST запросы для создания метрик через URL параметры.
+// Извлекает параметры из URL, создает DTO и делегирует создание сервису.
+// Возвращает plain text ответ с результатом операции.
 func (c *MetricController) HandleNew(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Add("Content-Type", "text/plain")
 
@@ -96,6 +106,7 @@ func (c *MetricController) HandleNewFromBody(rw http.ResponseWriter, r *http.Req
 func (c *MetricController) HandleGetItemFromBody(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Add("Content-Type", "application/json")
 
+	fmt.Printf("123")
 	getItemDto, err := mappers.HTTPWithBodyToGetMetric(r)
 	if err != nil {
 		c.errorHandler.Handle(rw, fmt.Errorf("error reading request: %w ", err))

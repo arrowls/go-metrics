@@ -1,3 +1,4 @@
+// Package repository содержит слой доступа к данным для метрик.
 package repository
 
 import (
@@ -17,17 +18,28 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// PostgresRepository реализует интерфейс Metric для работы с PostgreSQL.
+// Использует пул соединений для эффективной работы с базой данных.
+// Поддерживает повторные попытки при ошибках соединения.
 type PostgresRepository struct {
-	db     *pgxpool.Pool
+	// db - пул соединений с PostgreSQL
+	db *pgxpool.Pool
+	// logger - логгер для записи событий
 	logger *logrus.Logger
 }
 
+// NewPostgresRepository создает новый экземпляр PostgreSQL репозитория.
+// Принимает пул соединений и логгер для настройки репозитория.
 func NewPostgresRepository(db *pgxpool.Pool, logger *logrus.Logger) Metric {
 	return &PostgresRepository{
 		db,
 		logger,
 	}
 }
+
+// AddGaugeValue добавляет или обновляет gauge метрику в PostgreSQL.
+// Использует UPSERT для атомарного обновления существующих записей.
+// Поддерживает повторные попытки при ошибках соединения.
 func (m *PostgresRepository) AddGaugeValue(ctx context.Context, name string, value float64) error {
 	err := utils.WithRetry(func() (bool, error) {
 		_, dbErr := m.db.Exec(ctx, `
@@ -133,7 +145,7 @@ func (m *PostgresRepository) GetAll(ctx context.Context) (memstorage.MemStorage,
 				return true, dbErr
 			}
 
-			return false, fmt.Errorf("error while fetching gauges from database")
+			return false, fmt.Errorf("error while fetching counters from database")
 		}
 
 		defer counterRows.Close()

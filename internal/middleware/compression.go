@@ -1,21 +1,45 @@
+// Package middleware содержит HTTP middleware компоненты.
+// Включает сжатие, логирование, хеширование и другие промежуточные обработчики.
 package middleware
 
 import (
 	"compress/gzip"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 )
 
-type CompressWriter struct {
-	responseWriter http.ResponseWriter
-	gzipWriter     *gzip.Writer
+// gzipWriterPool - пул gzip writer'ов для переиспользования объектов.
+// Уменьшает нагрузку на GC при частом использовании сжатия.
+var gzipWriterPool = sync.Pool{
+	New: func() interface{} {
+		return gzip.NewWriter(nil)
+	},
 }
 
+// CompressWriter оборачивает http.ResponseWriter для сжатия ответов.
+// Автоматически сжимает данные в gzip формат при отправке клиенту.
+type CompressWriter struct {
+	// responseWriter - оригинальный ResponseWriter
+	responseWriter http.ResponseWriter
+	// gzipWriter - gzip writer для сжатия данных
+	gzipWriter *gzip.Writer
+	// pooled - флаг использования объекта из пула
+	pooled bool
+}
+
+// NewCompressWriter создает новый CompressWriter.
+// Получает gzip writer из пула и настраивает его для записи в responseWriter.
 func NewCompressWriter(w http.ResponseWriter) *CompressWriter {
+	gw := gzipWriterPool.Get().(*gzip.Writer)
+	gw.Reset(w)
+
 	return &CompressWriter{
 		responseWriter: w,
-		gzipWriter:     gzip.NewWriter(w),
+		gzipWriter:     gw,
+		pooled:         true,
 	}
 }
 
@@ -32,7 +56,11 @@ func (c *CompressWriter) WriteHeader(statusCode int) {
 }
 
 func (c *CompressWriter) Close() error {
-	return c.gzipWriter.Close()
+	err := c.gzipWriter.Close()
+	if c.pooled {
+		gzipWriterPool.Put(c.gzipWriter)
+	}
+	return err
 }
 
 type CompressReader struct {
@@ -72,6 +100,7 @@ func NewCompressionMiddleware(next http.Handler) http.Handler {
 			writer = compressWriter
 			defer func() {
 				if errClose := compressWriter.Close(); errClose != nil {
+					fmt.Printf("%v1", errClose)
 					w.WriteHeader(http.StatusInternalServerError)
 				}
 			}()
@@ -81,12 +110,15 @@ func NewCompressionMiddleware(next http.Handler) http.Handler {
 		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 			reader, err := NewCompressReader(r.Body)
 			if err != nil {
+				fmt.Printf("%v2", err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
 			defer func() {
 				if errClose := reader.Close(); errClose != nil {
+					fmt.Printf("%v3", errClose)
+
 					w.WriteHeader(http.StatusInternalServerError)
 				}
 			}()

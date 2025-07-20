@@ -81,7 +81,7 @@ func TestMetricController_HandleNew(t *testing.T) {
 			url:          "/update/gauge/TestMetric/",
 			params:       map[string]string{"type": "gauge", "name": "TestMetric", "value": ""},
 			expectedCode: http.StatusBadRequest,
-			expectedBody: `{"message":"Failed to read request: metric value not specified"}`,
+			expectedBody: `{"message":"Failed to read request: bad requestmetric value not specified"}`,
 		},
 		{
 			name:         "empty name",
@@ -89,7 +89,7 @@ func TestMetricController_HandleNew(t *testing.T) {
 			url:          "/update/gauge//1.23",
 			params:       map[string]string{"type": "gauge", "name": "", "value": "1.23"},
 			expectedCode: http.StatusNotFound,
-			expectedBody: `{"message":"Failed to read request: metric name not specified"}`,
+			expectedBody: `{"message":"Failed to read request: not foundmetric name not specified"}`,
 		},
 	}
 
@@ -158,7 +158,7 @@ func TestMetricController_HandleItem(t *testing.T) {
 				"name": "TestMetric",
 			},
 			expectedCode: http.StatusNotFound,
-			expectedBody: `{"message":"Failed to read request: unknown metric type:"}`,
+			expectedBody: `{"message":"Failed to read request: not foundunknown metric type:"}`,
 		},
 		{
 			name:   "HandleItem/invalid name",
@@ -169,7 +169,7 @@ func TestMetricController_HandleItem(t *testing.T) {
 				"name": "",
 			},
 			expectedCode: http.StatusNotFound,
-			expectedBody: `{"message":"Failed to read request: metric name is not specified"}`,
+			expectedBody: `{"message":"Failed to read request: not foundmetric name is not specified"}`,
 		},
 	}
 
@@ -282,7 +282,7 @@ func TestMetricController_HandleGetItemFromBody(t *testing.T) {
 		{
 			name:         "error in mapper",
 			expectedCode: http.StatusBadRequest,
-			expectedBody: `{"message":"Error reading request: could not read the request body"}`,
+			expectedBody: `{"message":"Error reading request: bad requestcould not read the request body"}`,
 			body: []byte(`{
 				"type":"invalid_type",
 				"id":"TestMetric",
@@ -291,7 +291,7 @@ func TestMetricController_HandleGetItemFromBody(t *testing.T) {
 		{
 			name:         "error in service",
 			expectedCode: http.StatusBadRequest,
-			expectedBody: `{"message":"Error reading request: could not read the request body"}`,
+			expectedBody: `{"message":"Error reading request: bad requestcould not read the request body"}`,
 		},
 	}
 

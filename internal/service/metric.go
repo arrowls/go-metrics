@@ -1,3 +1,4 @@
+// Package service содержит бизнес-логику для работы с метриками.
 package service
 
 import (
@@ -12,16 +13,24 @@ import (
 	"github.com/arrowls/go-metrics/internal/repository"
 )
 
+// MetricService реализует интерфейс Metric для работы с метриками.
+// Содержит бизнес-логику валидации и преобразования данных метрик.
 type MetricService struct {
+	// repository - репозиторий для доступа к хранилищу метрик
 	repository repository.Repository
 }
 
+// NewMetricService создает новый экземпляр сервиса метрик.
+// Принимает репозиторий для доступа к данным и возвращает настроенный сервис.
 func NewMetricService(repository *repository.Repository) *MetricService {
 	return &MetricService{
 		*repository,
 	}
 }
 
+// Create создает новую метрику или обновляет существующую.
+// Валидирует тип метрики и преобразует строковое значение в соответствующий тип.
+// Поддерживает типы gauge и counter.
 func (m *MetricService) Create(ctx context.Context, dto *dto.CreateMetric) error {
 	if dto.Type == config.GaugeType {
 		parsedValue, err := strconv.ParseFloat(dto.Value, 64)

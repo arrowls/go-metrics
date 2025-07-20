@@ -1,8 +1,11 @@
+// Package database содержит компоненты для работы с базой данных PostgreSQL.
+// Включает подключение, миграции и провайдер пула соединений.
 package database
 
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/arrowls/go-metrics/internal/config"
 	"github.com/arrowls/go-metrics/internal/di"
@@ -10,8 +13,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// diKey - ключ для хранения пула соединений в контейнере зависимостей
 const diKey = "database_pool"
 
+// ProvideDatabasePool предоставляет пул соединений с базой данных PostgreSQL.
+// Создает и настраивает пул соединений с оптимальными параметрами:
+// - Максимум 20 соединений
+// - Минимум 5 соединений
+// - Время жизни соединения: 1 час
+// - Время простоя соединения: 30 минут
+// - Период проверки здоровья: 1 минута
+// Автоматически выполняет миграции при первом подключении.
 func ProvideDatabasePool(container di.ContainerInterface) (*pgxpool.Pool, error) {
 	cfg := config.ProvideServerConfig(container)
 	loggerInst := logger.ProvideLogger(container)
@@ -21,7 +33,19 @@ func ProvideDatabasePool(container di.ContainerInterface) (*pgxpool.Pool, error)
 		return pool, nil
 	}
 
-	pool, err := pgxpool.New(context.Background(), cfg.DatabaseDSN)
+	dbConfig, err := pgxpool.ParseConfig(cfg.DatabaseDSN)
+	if err != nil {
+		loggerInst.Fatal("failed to parse database config: " + err.Error())
+		return nil, err
+	}
+
+	dbConfig.MaxConns = 20
+	dbConfig.MinConns = 5
+	dbConfig.MaxConnLifetime = time.Hour
+	dbConfig.MaxConnIdleTime = 30 * time.Minute
+	dbConfig.HealthCheckPeriod = time.Minute
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), dbConfig)
 	if err != nil {
 		loggerInst.Fatal("failed to connect to database: " + err.Error())
 		return nil, err

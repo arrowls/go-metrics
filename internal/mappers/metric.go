@@ -1,3 +1,5 @@
+// Package mappers содержит функции для преобразования данных между слоями приложения.
+// Включает маппинг HTTP запросов в DTO и обратно, а также преобразование метрик.
 package mappers
 
 import (
@@ -13,6 +15,9 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// HTTPToCreateMetric извлекает параметры создания метрики из URL запроса.
+// Парсит параметры type, name, value из URL и создает DTO CreateMetric.
+// Возвращает ошибку если обязательные параметры отсутствуют.
 func HTTPToCreateMetric(r *http.Request) (*dto.CreateMetric, error) {
 	metricType := chi.URLParam(r, "type")
 	name := chi.URLParam(r, "name")
