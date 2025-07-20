@@ -2,6 +2,8 @@ package controller
 
 import (
 	"log"
+	"net/http"
+	"net/http/pprof"
 
 	"github.com/arrowls/go-metrics/internal/apperrors"
 	"github.com/arrowls/go-metrics/internal/di"
@@ -44,8 +46,9 @@ func ProvideRouter(container di.ContainerInterface) *chi.Mux {
 	router := chi.NewRouter()
 	c := ProvideHTTPController(container)
 
-	router.Use(middleware.NewCompressionMiddleware)
 	router.Use(middleware.ProvideLoggingMiddleware(container))
+	router.Use(middleware.NewCompressionMiddleware)
+	router.Use(middleware.ProvideHashingMiddleware(container))
 
 	router.Get("/assets/*", c.Public.HandlePublic)
 	router.Get("/", c.Public.HandleIndex)
@@ -55,6 +58,13 @@ func ProvideRouter(container di.ContainerInterface) *chi.Mux {
 	router.Post("/value", c.Metric.HandleGetItemFromBody)
 	router.Get("/value/{type}/{name}", c.Metric.HandleItem)
 	router.Get("/ping", c.Public.Ping)
+
+	router.Get("/debug/pprof", pprof.Index)
+	router.Get("/debug/pprof/cmdline", pprof.Cmdline)
+	router.Get("/debug/pprof/profile", pprof.Profile)
+	router.Get("/debug/pprof/symbol", pprof.Symbol)
+	router.Get("/debug/pprof/trace", pprof.Trace)
+	router.Handle("/debug/pprof/{cmd}", http.HandlerFunc(pprof.Index))
 
 	if err := container.Add(routerDiKey, router); err != nil {
 		log.Fatal(err)

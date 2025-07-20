@@ -2,20 +2,33 @@ package middleware
 
 import (
 	"compress/gzip"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 )
+
+var gzipWriterPool = sync.Pool{
+	New: func() interface{} {
+		return gzip.NewWriter(nil)
+	},
+}
 
 type CompressWriter struct {
 	responseWriter http.ResponseWriter
 	gzipWriter     *gzip.Writer
+	pooled         bool
 }
 
 func NewCompressWriter(w http.ResponseWriter) *CompressWriter {
+	gw := gzipWriterPool.Get().(*gzip.Writer)
+	gw.Reset(w)
+
 	return &CompressWriter{
 		responseWriter: w,
-		gzipWriter:     gzip.NewWriter(w),
+		gzipWriter:     gw,
+		pooled:         true,
 	}
 }
 
@@ -32,7 +45,11 @@ func (c *CompressWriter) WriteHeader(statusCode int) {
 }
 
 func (c *CompressWriter) Close() error {
-	return c.gzipWriter.Close()
+	err := c.gzipWriter.Close()
+	if c.pooled {
+		gzipWriterPool.Put(c.gzipWriter)
+	}
+	return err
 }
 
 type CompressReader struct {
@@ -72,6 +89,7 @@ func NewCompressionMiddleware(next http.Handler) http.Handler {
 			writer = compressWriter
 			defer func() {
 				if errClose := compressWriter.Close(); errClose != nil {
+					fmt.Printf("%v1", errClose)
 					w.WriteHeader(http.StatusInternalServerError)
 				}
 			}()
@@ -81,12 +99,15 @@ func NewCompressionMiddleware(next http.Handler) http.Handler {
 		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 			reader, err := NewCompressReader(r.Body)
 			if err != nil {
+				fmt.Printf("%v2", err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
 			defer func() {
 				if errClose := reader.Close(); errClose != nil {
+					fmt.Printf("%v3", errClose)
+
 					w.WriteHeader(http.StatusInternalServerError)
 				}
 			}()

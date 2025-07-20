@@ -96,6 +96,7 @@ func (c *MetricController) HandleNewFromBody(rw http.ResponseWriter, r *http.Req
 func (c *MetricController) HandleGetItemFromBody(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Add("Content-Type", "application/json")
 
+	fmt.Printf("123")
 	getItemDto, err := mappers.HTTPWithBodyToGetMetric(r)
 	if err != nil {
 		c.errorHandler.Handle(rw, fmt.Errorf("error reading request: %w ", err))
