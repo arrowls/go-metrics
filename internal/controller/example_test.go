@@ -224,7 +224,7 @@ func ExamplePublicController_Ping() {
 
 // ExampleHTTPClient_CompleteWorkflow демонстрирует полный рабочий процесс с HTTP клиентом.
 // Показывает как использовать все основные эндпоинты в реальном приложении
-func ExampleHTTPClient_CompleteWorkflow() {
+func Example_n1() {
 	// В реальном приложении вы бы использовали http.Client
 	// Здесь показан пример с httptest для демонстрации
 
@@ -312,7 +312,7 @@ func ExampleHTTPClient_CompleteWorkflow() {
 
 // ExampleErrorHandling демонстрирует обработку ошибок при работе с API.
 // Показывает различные сценарии ошибок и их обработку
-func ExampleErrorHandling() {
+func Example_n2() {
 	// Создаем тестовый сервер
 	container := di.NewContainer()
 	loggerInst := logger.ProvideLogger(container)
